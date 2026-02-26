@@ -72,9 +72,12 @@ router.get('/', async (req, res) => {
       });
       if (fipeData) {
         fipeProvider = 'parallelum.com.br/fipe';
-        // Fill in missing vehicle fields from FIPE data (vehicleData is local to this request)
-        if (!vehicleData.brand) vehicleData.brand = fipeData.brand;
-        if (!vehicleData.model) vehicleData.model = fipeData.model;
+        // Enrich vehicle data with FIPE data if fields are missing
+        vehicleData = {
+          ...vehicleData,
+          brand: vehicleData.brand || fipeData.brand,
+          model: vehicleData.model || fipeData.model,
+        };
       }
     } catch (err) {
       console.error(`[consulta] FIPE lookup error:`, err.message);

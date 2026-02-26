@@ -4,6 +4,8 @@ const FIPE_BASE_URL = 'https://parallelum.com.br/fipe/api/v1';
 
 
 export async function searchFipeByVehicleData({ brand, model, year, vehicleType = 'carros' }) {
+  if (!brand || !model) return null;
+
   try {
     // Get brands list
     const brandsRes = await axios.get(`${FIPE_BASE_URL}/${vehicleType}/marcas`, { timeout: 10000 });
