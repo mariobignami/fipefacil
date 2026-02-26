@@ -42,12 +42,16 @@ app.use((req, res) => res.status(404).json({ error: 'NOT_FOUND', message: 'Rota 
 
 // Error handler
 app.use((err, req, res, next) => {
-  console.error('[error]', err.message);
+  const isDev = process.env.NODE_ENV !== 'production';
+  console.error('[error]', isDev ? err.stack : err.message);
   res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Erro interno no servidor.' });
 });
 
 app.listen(PORT, () => {
   console.log(`FipeFácil backend running on http://localhost:${PORT}`);
+  if (!process.env.PLATE_API_KEY || !process.env.PLATE_API_URL) {
+    console.warn('[config] PLATE_API_KEY or PLATE_API_URL not set — plate lookups will be unavailable.');
+  }
 });
 
 export default app;

@@ -3,8 +3,11 @@ import axios from 'axios';
 const FIPE_BASE_URL = 'https://parallelum.com.br/fipe/api/v1';
 
 
+const ALLOWED_VEHICLE_TYPES = ['carros', 'motos', 'caminhoes'];
+
 export async function searchFipeByVehicleData({ brand, model, year, vehicleType = 'carros' }) {
   if (!brand || !model) return null;
+  if (!ALLOWED_VEHICLE_TYPES.includes(vehicleType)) return null;
 
   try {
     // Get brands list

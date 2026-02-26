@@ -9,6 +9,13 @@ const STATUS = {
   ERROR: 'error',
 };
 
+const ERROR_MESSAGES = {
+  404: 'Veículo não encontrado.',
+  429: 'Muitas requisições. Aguarde alguns minutos e tente novamente.',
+  503: 'Serviço indisponível. Tente novamente.',
+  500: 'Erro interno no servidor. Tente novamente.',
+};
+
 export default function App() {
   const [status, setStatus] = useState(STATUS.IDLE);
   const [result, setResult] = useState(null);
@@ -23,21 +30,9 @@ export default function App() {
       const res = await fetch(`/api/consulta?placa=${encodeURIComponent(plate)}`);
       const data = await res.json();
 
-      if (res.status === 404) {
+      if (!res.ok) {
         setStatus(STATUS.ERROR);
-        setErrorMessage(data.message || 'Veículo não encontrado.');
-        return;
-      }
-
-      if (res.status === 503 || res.status === 500) {
-        setStatus(STATUS.ERROR);
-        setErrorMessage(data.message || 'Serviço indisponível. Tente novamente.');
-        return;
-      }
-
-      if (res.status === 429) {
-        setStatus(STATUS.ERROR);
-        setErrorMessage('Muitas requisições. Aguarde alguns minutos e tente novamente.');
+        setErrorMessage(data.message || ERROR_MESSAGES[res.status] || 'Erro ao consultar. Tente novamente.');
         return;
       }
 
