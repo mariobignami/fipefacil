@@ -71,7 +71,7 @@ router.get('/', async (req, res) => {
         year: vehicleData.year
       });
       if (fipeData) {
-        fipeProvider = 'parallelum.com.br/fipe';
+        fipeProvider = 'fipe.parallelum.com.br';
         // Enrich vehicle data with FIPE data if fields are missing
         vehicleData = {
           ...vehicleData,

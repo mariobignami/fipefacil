@@ -79,7 +79,7 @@ export default function App() {
       </main>
 
       <footer className="app-footer">
-        <p>Dados da Tabela FIPE fornecidos por <a href="https://parallelum.com.br/fipe" target="_blank" rel="noopener noreferrer">parallelum.com.br</a></p>
+        <p>Dados da Tabela FIPE fornecidos por <a href="https://fipe.parallelum.com.br" target="_blank" rel="noopener noreferrer">fipe.parallelum.com.br</a></p>
       </footer>
     </div>
   );
