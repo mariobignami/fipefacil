@@ -1,19 +1,15 @@
 import React, { useState } from 'react';
 import PlateForm from './components/PlateForm.jsx';
 import VehicleResult from './components/VehicleResult.jsx';
+import DemoSection from './components/DemoSection.jsx';
+import { isDemoPlate, getDemoPlateData } from './services/mockPlateData.js';
+import { searchFipeByVehicleData } from './services/fipeService.js';
 
 const STATUS = {
   IDLE: 'idle',
   LOADING: 'loading',
   SUCCESS: 'success',
   ERROR: 'error',
-};
-
-const ERROR_MESSAGES = {
-  404: 'Veículo não encontrado.',
-  429: 'Muitas requisições. Aguarde alguns minutos e tente novamente.',
-  503: 'Serviço indisponível. Tente novamente.',
-  500: 'Erro interno no servidor. Tente novamente.',
 };
 
 export default function App() {
@@ -27,20 +23,46 @@ export default function App() {
     setErrorMessage('');
 
     try {
-      const res = await fetch(`/api/consulta?placa=${encodeURIComponent(plate)}`);
-      const data = await res.json();
+      let vehicleData = null;
+      let fipeData = null;
+      let isDemo = false;
 
-      if (!res.ok) {
-        setStatus(STATUS.ERROR);
-        setErrorMessage(data.message || ERROR_MESSAGES[res.status] || 'Erro ao consultar. Tente novamente.');
-        return;
+      // Check if this is a demo plate
+      if (isDemoPlate(plate)) {
+        vehicleData = getDemoPlateData(plate);
+        isDemo = true;
       }
 
-      setResult(data);
-      setStatus(STATUS.SUCCESS);
+      // If we have vehicle data (from demo), search FIPE
+      if (vehicleData) {
+        fipeData = await searchFipeByVehicleData({
+          brand: vehicleData.brand,
+          model: vehicleData.model,
+          year: vehicleData.year,
+          vehicleType: vehicleData.vehicleType || 'cars'
+        });
+      }
+
+      // If we got data, show it
+      if (vehicleData || fipeData) {
+        setResult({
+          plate,
+          vehicle: vehicleData,
+          fipe: fipeData,
+          isDemo
+        });
+        setStatus(STATUS.SUCCESS);
+      } else {
+        setStatus(STATUS.ERROR);
+        setErrorMessage(
+          'Não foi possível encontrar dados para esta placa. ' +
+          'Use uma das placas de exemplo para testar o aplicativo.'
+        );
+      }
     } catch (err) {
+      console.error('[App] Error:', err);
       setStatus(STATUS.ERROR);
-      setErrorMessage('Erro de conexão. Verifique sua internet e tente novamente.');
+      setErrorMessage('Erro ao consultar. Verifique sua internet e tente novamente.');
     }
   }
 
@@ -59,6 +81,10 @@ export default function App() {
       <main className="app-main">
         <PlateForm onSubmit={handleSubmit} loading={status === STATUS.LOADING} />
 
+        {status === STATUS.IDLE && (
+          <DemoSection onPlateSelect={handleSubmit} />
+        )}
+
         {status === STATUS.LOADING && (
           <div className="loading-container" aria-live="polite">
             <div className="loading-spinner" />
@@ -74,7 +100,21 @@ export default function App() {
         )}
 
         {status === STATUS.SUCCESS && result && (
-          <VehicleResult data={result} />
+          <>
+            <VehicleResult data={result} />
+            <div className="try-another">
+              <button
+                className="try-another-button"
+                onClick={() => {
+                  setStatus(STATUS.IDLE);
+                  setResult(null);
+                  setErrorMessage('');
+                }}
+              >
+                Consultar outra placa
+              </button>
+            </div>
+          </>
         )}
       </main>
 
