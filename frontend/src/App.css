@@ -447,3 +447,125 @@ body {
   }
 }
 
+/* Demo Section */
+.demo-section {
+  background: var(--color-white);
+  border-radius: var(--radius);
+  padding: 1.75rem;
+  box-shadow: var(--shadow);
+  margin-bottom: 1.5rem;
+  border: 1px solid rgba(22, 163, 74, 0.1);
+}
+
+.demo-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+
+.demo-description {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  text-align: center;
+  margin-bottom: 1.25rem;
+  line-height: 1.5;
+}
+
+.demo-plates {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.demo-plate-button {
+  background: var(--color-bg);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.demo-plate-button:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+}
+
+.demo-plate-button:active {
+  transform: translateY(0);
+}
+
+.demo-plate-text {
+  font-size: 1.125rem;
+  font-weight: 800;
+  font-family: 'Courier New', monospace;
+  color: var(--color-text);
+  letter-spacing: 0.1em;
+}
+
+.demo-plate-info {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.demo-note {
+  background: var(--color-primary-light);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  border-left: 3px solid var(--color-primary);
+}
+
+.demo-note p {
+  font-size: 0.8125rem;
+  color: var(--color-text);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.demo-note strong {
+  color: var(--color-primary-dark);
+}
+
+/* Try Another Button */
+.try-another {
+  text-align: center;
+  margin-top: 1.5rem;
+}
+
+.try-another-button {
+  background: var(--color-white);
+  border: 2px solid var(--color-primary);
+  color: var(--color-primary);
+  padding: 0.875rem 1.5rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 200px;
+}
+
+.try-another-button:hover {
+  background: var(--color-primary);
+  color: var(--color-white);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(22, 163, 74, 0.3);
+}
+
+.try-another-button:active {
+  transform: translateY(0);
+}
+
