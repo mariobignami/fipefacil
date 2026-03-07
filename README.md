@@ -13,20 +13,14 @@ Você pode usar diretamente no seu celular ou computador!
 O aplicativo oferece duas formas de busca, acessíveis através de botões no topo da página:
 
 ### 🚗 Busca por Placa
-Consulte veículos através da placa. Inclui 4 placas de demonstração que funcionam sem backend:
+Consulte veículos através da placa usando a API Parallelum DENATRAN:
 
 1. Acesse o aplicativo e selecione "Busca por Placa"
-2. Digite uma placa (formato ABC1234 ou ABC1D23) ou clique em uma placa de exemplo
-3. As placas de demonstração (HHE7F34, FDP0389, ABC1234, XYZ5678) buscam dados reais da FIPE
-4. Para placas reais, é necessário configurar o backend com uma API externa
+2. Digite a placa do veículo (formato ABC1234 ou ABC1D23)
+3. Clique em "Consultar"
+4. Os dados do veículo são obtidos via API e o valor FIPE é buscado automaticamente
 
-**Placas de Exemplo Disponíveis:**
-- **HHE-7F34**: Volkswagen Gol 2020
-- **FDP-0389**: Fiat Uno 2018
-- **ABC-1234**: Chevrolet Onix 2019
-- **XYZ-5678**: Honda Civic 2021
-
-### 📋 Busca por Veículo (Recomendado) ⭐
+### 📋 Busca por Veículo
 Funciona 100% online sem necessidade de backend.
 
 1. Selecione "Busca por Veículo" no topo
@@ -39,11 +33,10 @@ Funciona 100% online sem necessidade de backend.
 
 ## ✨ Funcionalidades
 
-- ✅ **Busca por Placa**: Consulte veículos através da placa (com placas de demonstração disponíveis)
+- ✅ **Busca por Placa**: Consulta via Parallelum DENATRAN API + valor FIPE automaticamente
 - ✅ **Busca Manual Completa**: Consulte qualquer veículo selecionando marca, modelo e ano
 - ✅ **Toggle de Modos de Busca**: Alterne facilmente entre busca por placa e busca manual
-- ✅ **Placas de Demonstração**: 4 placas de exemplo que funcionam sem backend
-- ✅ **Dados Reais da Tabela FIPE**: Preços atualizados mensalmente
+- ✅ **Dados Reais da Tabela FIPE**: Preços atualizados mensalmente via fipe.parallelum.com.br
 - ✅ **Suporte a Múltiplos Tipos**: Carros, motos e caminhões
 - ✅ **Interface Intuitiva**: Design moderno e responsivo
 - ✅ **Validação de Placas**: Suporte para formato antigo (ABC1234) e Mercosul (ABC1D23)
