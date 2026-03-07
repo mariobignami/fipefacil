@@ -4,6 +4,7 @@ import ManualSearch from './components/ManualSearch.jsx';
 import VehicleResult from './components/VehicleResult.jsx';
 import DemoSection from './components/DemoSection.jsx';
 import { consultarPlaca } from './services/consultaService.js';
+import { searchFipeByCodes } from './services/fipeService.js';
 
 const STATUS = {
   IDLE: 'idle',
