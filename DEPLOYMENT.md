@@ -4,24 +4,16 @@
 
 ### 1. **Aplicação Convertida para Frontend Standalone**
    - ✅ Removida dependência do backend
-   - ✅ Consultas FIPE agora são feitas diretamente no navegador
+   - ✅ Consultas FIPE agora são feitas diretamente no navegador via fipe.parallelum.com.br
+   - ✅ Consultas de placa feitas diretamente no navegador via denatran.parallelum.com.br
    - ✅ Funciona 100% estático (pode ser hospedado no GitHub Pages)
 
-### 2. **Seção de Testes Adicionada**
-   - ✅ 4 placas de exemplo disponíveis para teste:
-     - **HHE-7F34** - Volkswagen Gol 2020
-     - **FDP-0389** - Fiat Uno 2018
-     - **ABC-1234** - Chevrolet Onix 2019
-     - **XYZ-5678** - Honda Civic 2021
-   - ✅ Interface amigável com botões clicáveis
-   - ✅ Busca valores reais da Tabela FIPE
-
-### 3. **GitHub Pages Configurado**
+### 2. **GitHub Pages Configurado**
    - ✅ Vite configurado com base path correto (`/fipefacil/`)
    - ✅ GitHub Actions workflow criado para deploy automático
    - ✅ Build testado e funcionando
 
-### 4. **Documentação Atualizada**
+### 3. **Documentação Atualizada**
    - ✅ README.md com instruções completas
    - ✅ Este guia de deployment
 
@@ -60,20 +52,16 @@ Você pode acessar este link no seu celular, tablet ou computador!
 
 ## 🎯 Como Usar o Aplicativo
 
-### Opção 1: Usar Placas de Exemplo
-1. Na página inicial, você verá 4 placas de exemplo
-2. Clique em qualquer uma delas
-3. O aplicativo buscará os dados reais da FIPE
+### Opção 1: Busca por Placa
+1. Na página inicial, selecione "Busca por Placa"
+2. Digite a placa do veículo (ex: ABC1234 ou ABC1D23)
+3. Clique em "Consultar"
+4. O aplicativo busca os dados do veículo via DENATRAN e o valor FIPE automaticamente
 
-### Opção 2: Digitar uma Placa de Exemplo
-1. Digite uma das placas de exemplo no campo de entrada:
-   - HHE-7F34
-   - FDP-0389
-   - ABC-1234
-   - XYZ-5678
-2. Clique em "Consultar"
-
-**Nota:** Como o aplicativo não possui acesso a uma API de consulta de placas reais (que requer autenticação), apenas as placas de exemplo funcionarão. Os valores FIPE exibidos são reais e vêm da API pública da FIPE.
+### Opção 2: Busca por Veículo
+1. Selecione "Busca por Veículo" no topo
+2. Escolha o tipo, marca, modelo e ano do veículo
+3. Clique em "Consultar Valor FIPE"
 
 ---
 
@@ -87,12 +75,12 @@ fipefacil/
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── DemoSection.jsx # Seção com placas de exemplo
-│   │   │   ├── PlateForm.jsx
+│   │   │   ├── PlateForm.jsx   # Formulário de busca por placa
+│   │   │   ├── ManualSearch.jsx # Busca manual por veículo
 │   │   │   └── VehicleResult.jsx
 │   │   ├── services/
-│   │   │   ├── fipeService.js  # Consultas à API FIPE
-│   │   │   └── mockPlateData.js # Dados das placas de exemplo
+│   │   │   ├── fipeService.js  # Consultas à API FIPE (parallelum)
+│   │   │   └── consultaService.js # Consulta de placa (DENATRAN parallelum)
 │   │   ├── App.jsx
 │   │   ├── App.css
 │   │   └── main.jsx
@@ -107,7 +95,8 @@ fipefacil/
 ## 🎨 Funcionalidades
 
 ✅ **Interface Responsiva** - Funciona perfeitamente em celular
-✅ **Placas de Teste** - 4 exemplos pré-configurados
+✅ **Busca por Placa** - Via API DENATRAN Parallelum + FIPE automático
+✅ **Busca por Veículo** - Seleção de marca/modelo/ano
 ✅ **Dados Reais FIPE** - Consulta valores atualizados
 ✅ **Deploy Automático** - Atualizações automáticas via GitHub Actions
 ✅ **Sem Backend** - Funciona 100% no navegador
@@ -122,9 +111,10 @@ fipefacil/
 - Aguarde alguns minutos após o primeiro deploy
 - Limpe o cache do navegador (Ctrl+Shift+R ou Cmd+Shift+R)
 
-### Placas diferentes das de exemplo não funcionam
-- Isso é esperado! O aplicativo só funciona com as placas de exemplo
-- Para consultar placas reais, seria necessário uma API de consulta de placas com autenticação
+### A busca por placa retorna erro
+- Verifique se a placa está no formato correto (ABC1234 ou ABC1D23)
+- A API DENATRAN pode estar temporariamente indisponível; use a busca manual
+- Use a aba "Busca por Veículo" como alternativa
 
 ### O workflow de deploy falhou
 1. Vá para https://github.com/mariobignami/fipefacil/actions
@@ -138,7 +128,7 @@ fipefacil/
 
 1. Após o deploy estar completo
 2. No seu celular, acesse: https://mariobignami.github.io/fipefacil/
-3. Teste clicando nas placas de exemplo
+3. Digite uma placa ou selecione a busca manual por veículo
 4. Para acesso rápido, adicione à tela inicial:
    - **iPhone**: Safari → Compartilhar → Adicionar à Tela de Início
    - **Android**: Chrome → Menu (⋮) → Adicionar à tela inicial

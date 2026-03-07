@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
 import ManualSearch from './components/ManualSearch.jsx';
 import PlateForm from './components/PlateForm.jsx';
-import DemoSection from './components/DemoSection.jsx';
 import VehicleResult from './components/VehicleResult.jsx';
 import { searchFipeByCodes, searchFipeByVehicleData } from './services/fipeService.js';
 import { consultarPlaca } from './services/consultaService.js';
-import { isDemoPlate, getDemoPlateData } from './services/mockPlateData.js';
 
 const STATUS = {
   IDLE: 'idle',
@@ -68,38 +66,34 @@ export default function App() {
     setErrorMessage('');
 
     try {
-      // Check if it's a demo plate
-      if (isDemoPlate(plate)) {
-        const demoData = getDemoPlateData(plate);
-        // For demo plates, fetch real FIPE data using vehicle information
-        const fipeData = await searchFipeByVehicleData({
-          brand: demoData.brand,
-          model: demoData.model,
-          year: demoData.year,
-          vehicleType: demoData.vehicleType
-        });
+      // Step 1: Look up vehicle info from plate via Parallelum DENATRAN API
+      const vehicleData = await consultarPlaca(plate);
 
-        setResult({
-          plate: plate,
-          vehicle: {
-            brand: demoData.brand,
-            model: demoData.model,
-            year: demoData.year,
-            fuel: demoData.fuel,
-            color: demoData.color,
-          },
-          fipe: fipeData,
-          isDemo: true
-        });
-        setStatus(STATUS.SUCCESS);
+      if (!vehicleData.brand || !vehicleData.model) {
+        setStatus(STATUS.ERROR);
+        setErrorMessage('Dados do veículo incompletos. Tente a busca manual por veículo.');
         return;
       }
 
-      // Real plate lookup via backend API
-      const data = await consultarPlaca(plate);
+      // Step 2: Search FIPE using vehicle info — same API as manual car search
+      const fipeData = await searchFipeByVehicleData({
+        brand: vehicleData.brand,
+        model: vehicleData.model,
+        year: vehicleData.year,
+        vehicleType: vehicleData.vehicleType || 'cars',
+      });
+
       setResult({
-        ...data,
-        isDemo: false
+        plate: plate,
+        vehicle: {
+          brand: vehicleData.brand,
+          model: vehicleData.model,
+          year: vehicleData.year || fipeData?.year,
+          fuel: vehicleData.fuel || fipeData?.fuel,
+          color: vehicleData.color,
+        },
+        fipe: fipeData,
+        isDemo: false,
       });
       setStatus(STATUS.SUCCESS);
     } catch (err) {
@@ -107,7 +101,7 @@ export default function App() {
       setStatus(STATUS.ERROR);
 
       if (err.status === 503) {
-        setErrorMessage(err.message || 'Backend não disponível. Use a busca manual por veículo.');
+        setErrorMessage(err.message || 'Serviço de consulta de placa indisponível. Use a busca manual por veículo.');
       } else if (err.status === 404) {
         setErrorMessage('Veículo não encontrado para a placa informada.');
       } else {
@@ -158,10 +152,7 @@ export default function App() {
             </div>
 
             {searchMode === SEARCH_MODE.PLATE ? (
-              <>
-                <PlateForm onSubmit={handlePlateSubmit} loading={status === STATUS.LOADING} />
-                <DemoSection onPlateSelect={handlePlateSubmit} />
-              </>
+              <PlateForm onSubmit={handlePlateSubmit} loading={status === STATUS.LOADING} />
             ) : (
               <ManualSearch onSubmit={handleManualSubmit} loading={status === STATUS.LOADING} />
             )}
