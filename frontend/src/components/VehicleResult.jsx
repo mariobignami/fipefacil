@@ -21,9 +21,11 @@ export default function VehicleResult({ data }) {
 
   return (
     <div className="result-container">
-      <div className="result-plate-badge">
-        <span className="result-plate">{plate}</span>
-      </div>
+      {plate && (
+        <div className="result-plate-badge">
+          <span className="result-plate">{plate}</span>
+        </div>
+      )}
 
       {hasVehicleData && (
         <div className="result-card">

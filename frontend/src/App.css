@@ -569,3 +569,116 @@ body {
   transform: translateY(0);
 }
 
+/* Search Mode Selector */
+.search-mode-selector {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  background: var(--color-white);
+  padding: 0.5rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.mode-button {
+  flex: 1;
+  padding: 0.875rem 1rem;
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.mode-button:hover {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.mode-button.active {
+  background: var(--color-primary);
+  color: var(--color-white);
+  border-color: var(--color-primary);
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.3);
+}
+
+/* Manual Search Form */
+.manual-search {
+  background: var(--color-white);
+  border-radius: var(--radius);
+  padding: 1.75rem;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid rgba(22, 163, 74, 0.1);
+}
+
+.manual-search-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+
+.manual-search-description {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  text-align: center;
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text);
+  letter-spacing: 0.01em;
+}
+
+.form-select {
+  padding: 0.875rem 1rem;
+  font-size: 1rem;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  color: var(--color-text);
+  background: #fafafa;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3e%3cpath fill='%236b7280' d='M1.41 0L6 4.59 10.59 0 12 1.41l-6 6-6-6z'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  padding-right: 3rem;
+}
+
+.form-select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px var(--color-primary-glow);
+  background-color: var(--color-white);
+}
+
+.form-select:disabled {
+  background-color: var(--color-bg);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.manual-search-btn {
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
