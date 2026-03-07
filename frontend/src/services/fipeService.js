@@ -164,3 +164,10 @@ export async function getFipePrice(brandCode, modelCode, yearCode, vehicleType =
     return null;
   }
 }
+
+/**
+ * Direct search by codes - used when user selects from dropdowns
+ */
+export async function searchFipeByCodes({ brandCode, modelCode, yearCode, vehicleType = 'cars' }) {
+  return getFipePrice(brandCode, modelCode, yearCode, vehicleType);
+}

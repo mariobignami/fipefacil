@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import PlateForm from './components/PlateForm.jsx';
+import ManualSearch from './components/ManualSearch.jsx';
 import VehicleResult from './components/VehicleResult.jsx';
 import DemoSection from './components/DemoSection.jsx';
 import { isDemoPlate, getDemoPlateData } from './services/mockPlateData.js';
-import { searchFipeByVehicleData } from './services/fipeService.js';
+import { searchFipeByVehicleData, searchFipeByCodes } from './services/fipeService.js';
 
 const STATUS = {
   IDLE: 'idle',
@@ -12,12 +13,18 @@ const STATUS = {
   ERROR: 'error',
 };
 
+const SEARCH_MODE = {
+  PLATE: 'plate',
+  MANUAL: 'manual',
+};
+
 export default function App() {
   const [status, setStatus] = useState(STATUS.IDLE);
   const [result, setResult] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
+  const [searchMode, setSearchMode] = useState(SEARCH_MODE.MANUAL);
 
-  async function handleSubmit(plate) {
+  async function handlePlateSubmit(plate) {
     setStatus(STATUS.LOADING);
     setResult(null);
     setErrorMessage('');
@@ -56,7 +63,7 @@ export default function App() {
         setStatus(STATUS.ERROR);
         setErrorMessage(
           'Não foi possível encontrar dados para esta placa. ' +
-          'Use uma das placas de exemplo para testar o aplicativo.'
+          'Use uma das placas de exemplo ou faça uma busca manual.'
         );
       }
     } catch (err) {
@@ -64,6 +71,49 @@ export default function App() {
       setStatus(STATUS.ERROR);
       setErrorMessage('Erro ao consultar. Verifique sua internet e tente novamente.');
     }
+  }
+
+  async function handleManualSubmit(vehicleData) {
+    setStatus(STATUS.LOADING);
+    setResult(null);
+    setErrorMessage('');
+
+    try {
+      const fipeData = await searchFipeByCodes({
+        brandCode: vehicleData.brandCode,
+        modelCode: vehicleData.modelCode,
+        yearCode: vehicleData.yearCode,
+        vehicleType: vehicleData.vehicleType
+      });
+
+      if (fipeData) {
+        setResult({
+          plate: null,
+          vehicle: {
+            brand: fipeData.brand,
+            model: fipeData.model,
+            year: fipeData.year,
+            fuel: fipeData.fuel,
+          },
+          fipe: fipeData,
+          isDemo: false
+        });
+        setStatus(STATUS.SUCCESS);
+      } else {
+        setStatus(STATUS.ERROR);
+        setErrorMessage('Não foi possível consultar o valor FIPE para este veículo.');
+      }
+    } catch (err) {
+      console.error('[App] Manual search error:', err);
+      setStatus(STATUS.ERROR);
+      setErrorMessage('Erro ao consultar. Verifique sua internet e tente novamente.');
+    }
+  }
+
+  function resetSearch() {
+    setStatus(STATUS.IDLE);
+    setResult(null);
+    setErrorMessage('');
   }
 
   return (
@@ -74,15 +124,39 @@ export default function App() {
             <span className="app-title-fipe">Fipe</span>
             <span className="app-title-facil">Fácil</span>
           </h1>
-          <p className="app-subtitle">Consulte o valor FIPE do seu veículo pela placa</p>
+          <p className="app-subtitle">Consulte o valor FIPE do seu veículo</p>
         </div>
       </header>
 
       <main className="app-main">
-        <PlateForm onSubmit={handleSubmit} loading={status === STATUS.LOADING} />
-
         {status === STATUS.IDLE && (
-          <DemoSection onPlateSelect={handleSubmit} />
+          <>
+            <div className="search-mode-selector">
+              <button
+                className={`mode-button ${searchMode === SEARCH_MODE.MANUAL ? 'active' : ''}`}
+                onClick={() => setSearchMode(SEARCH_MODE.MANUAL)}
+              >
+                🔍 Busca por Veículo
+              </button>
+              <button
+                className={`mode-button ${searchMode === SEARCH_MODE.PLATE ? 'active' : ''}`}
+                onClick={() => setSearchMode(SEARCH_MODE.PLATE)}
+              >
+                🚗 Busca por Placa
+              </button>
+            </div>
+
+            {searchMode === SEARCH_MODE.MANUAL && (
+              <ManualSearch onSubmit={handleManualSubmit} loading={status === STATUS.LOADING} />
+            )}
+
+            {searchMode === SEARCH_MODE.PLATE && (
+              <>
+                <PlateForm onSubmit={handlePlateSubmit} loading={status === STATUS.LOADING} />
+                <DemoSection onPlateSelect={handlePlateSubmit} />
+              </>
+            )}
+          </>
         )}
 
         {status === STATUS.LOADING && (
@@ -93,25 +167,25 @@ export default function App() {
         )}
 
         {status === STATUS.ERROR && (
-          <div className="error-banner" role="alert">
-            <span className="error-icon">⚠️</span>
-            <p>{errorMessage}</p>
-          </div>
+          <>
+            <div className="error-banner" role="alert">
+              <span className="error-icon">⚠️</span>
+              <p>{errorMessage}</p>
+            </div>
+            <div className="try-another">
+              <button className="try-another-button" onClick={resetSearch}>
+                Voltar
+              </button>
+            </div>
+          </>
         )}
 
         {status === STATUS.SUCCESS && result && (
           <>
             <VehicleResult data={result} />
             <div className="try-another">
-              <button
-                className="try-another-button"
-                onClick={() => {
-                  setStatus(STATUS.IDLE);
-                  setResult(null);
-                  setErrorMessage('');
-                }}
-              >
-                Consultar outra placa
+              <button className="try-another-button" onClick={resetSearch}>
+                Nova Consulta
               </button>
             </div>
           </>

@@ -27,7 +27,7 @@ export default function DemoSection({ onPlateSelect }) {
       <div className="demo-note">
         <p>
           💡 <strong>Nota:</strong> Estas são placas de exemplo para demonstração.
-          O aplicativo busca os preços reais da Tabela FIPE através da API pública.
+          Para consultar qualquer veículo, use a aba "Busca por Veículo" para selecionar marca, modelo e ano.
         </p>
       </div>
     </div>
