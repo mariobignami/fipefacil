@@ -10,7 +10,9 @@ Você pode usar diretamente no seu celular ou computador!
 
 ## 🎯 Como Usar
 
-### Busca por Veículo (Recomendado)
+### Busca por Veículo (Recomendado) ⭐
+Esta é a forma principal de usar o aplicativo. Funciona 100% online sem necessidade de backend.
+
 1. Acesse o aplicativo no link acima
 2. Selecione o tipo de veículo (Carro, Moto ou Caminhão)
 3. Escolha a marca do veículo
@@ -19,19 +21,9 @@ Você pode usar diretamente no seu celular ou computador!
 6. Clique em "Consultar Valor FIPE"
 7. Veja o valor FIPE atualizado com todos os detalhes!
 
-### Busca por Placa (Demonstração)
-1. Clique na aba "Busca por Placa"
-2. Digite uma placa no formato antigo (ABC1234) ou Mercosul (ABC1D23)
-3. Clique em "Consultar" ou use uma das placas de exemplo
-4. Veja os dados do veículo e o valor FIPE!
-
-### Placas de Exemplo
-
-O aplicativo inclui placas de demonstração que você pode testar:
-- **HHE-7F34** - Volkswagen Gol 2020
-- **FDP-0389** - Fiat Uno 2018
-- **ABC-1234** - Chevrolet Onix 2019
-- **XYZ-5678** - Honda Civic 2021
+### Busca por Placa
+A busca por placa requer um backend configurado com uma API externa de consulta de placas.
+No GitHub Pages, essa funcionalidade está desabilitada. Use a busca manual por veículo.
 
 ## ✨ Funcionalidades
 
@@ -56,13 +48,30 @@ O frontend estará disponível em `http://localhost:5173`
 
 ### Backend (Opcional)
 
-O backend é opcional. O frontend funciona de forma independente consultando a API FIPE diretamente.
+O backend é opcional e necessário apenas para a funcionalidade de busca por placa.
+O frontend funciona de forma independente consultando a API FIPE diretamente.
 
-```bash
-cd backend
-npm install
-npm start
-```
+Para habilitar a busca por placa:
+
+1. Configure as variáveis de ambiente (copie `.env.example` para `.env`):
+   ```bash
+   cd backend
+   cp .env.example .env
+   ```
+
+2. Edite o `.env` e configure sua API de consulta de placas:
+   ```
+   PLATE_API_KEY=sua_chave_api
+   PLATE_API_URL=https://api.example.com/consulta/{plate}
+   ```
+
+3. Inicie o backend:
+   ```bash
+   npm install
+   npm start
+   ```
+
+O backend estará disponível em `http://localhost:3001`
 
 ## 📦 Deploy
 
