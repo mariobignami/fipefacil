@@ -3,8 +3,7 @@ import PlateForm from './components/PlateForm.jsx';
 import ManualSearch from './components/ManualSearch.jsx';
 import VehicleResult from './components/VehicleResult.jsx';
 import DemoSection from './components/DemoSection.jsx';
-import { isDemoPlate, getDemoPlateData } from './services/mockPlateData.js';
-import { searchFipeByVehicleData, searchFipeByCodes } from './services/fipeService.js';
+import { consultarPlaca } from './services/consultaService.js';
 
 const STATUS = {
   IDLE: 'idle',
@@ -30,46 +29,19 @@ export default function App() {
     setErrorMessage('');
 
     try {
-      let vehicleData = null;
-      let fipeData = null;
-      let isDemo = false;
-
-      // Check if this is a demo plate
-      if (isDemoPlate(plate)) {
-        vehicleData = getDemoPlateData(plate);
-        isDemo = true;
-      }
-
-      // If we have vehicle data (from demo), search FIPE
-      if (vehicleData) {
-        fipeData = await searchFipeByVehicleData({
-          brand: vehicleData.brand,
-          model: vehicleData.model,
-          year: vehicleData.year,
-          vehicleType: vehicleData.vehicleType || 'cars'
-        });
-      }
-
-      // If we got data, show it
-      if (vehicleData || fipeData) {
-        setResult({
-          plate,
-          vehicle: vehicleData,
-          fipe: fipeData,
-          isDemo
-        });
-        setStatus(STATUS.SUCCESS);
-      } else {
-        setStatus(STATUS.ERROR);
-        setErrorMessage(
-          'Não foi possível encontrar dados para esta placa. ' +
-          'Use uma das placas de exemplo ou faça uma busca manual.'
-        );
-      }
+      const data = await consultarPlaca(plate);
+      setResult(data);
+      setStatus(STATUS.SUCCESS);
     } catch (err) {
       console.error('[App] Error:', err);
       setStatus(STATUS.ERROR);
-      setErrorMessage('Erro ao consultar. Verifique sua internet e tente novamente.');
+      if (err.status === 400) {
+        setErrorMessage('Placa inválida. Use o formato antigo (ABC1234) ou Mercosul (ABC1D23).');
+      } else if (err.status === 404) {
+        setErrorMessage('Veículo não encontrado para a placa informada.');
+      } else {
+        setErrorMessage('Erro ao consultar. Verifique sua conexão e tente novamente.');
+      }
     }
   }
 
