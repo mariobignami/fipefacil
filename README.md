@@ -10,27 +10,43 @@ Você pode usar diretamente no seu celular ou computador!
 
 ## 🎯 Como Usar
 
-### Busca por Veículo (Recomendado) ⭐
-Esta é a forma principal de usar o aplicativo. Funciona 100% online sem necessidade de backend.
+O aplicativo oferece duas formas de busca, acessíveis através de botões no topo da página:
 
-1. Acesse o aplicativo no link acima
-2. Selecione o tipo de veículo (Carro, Moto ou Caminhão)
-3. Escolha a marca do veículo
-4. Selecione o modelo
-5. Escolha o ano
+### 🚗 Busca por Placa
+Consulte veículos através da placa. Inclui 4 placas de demonstração que funcionam sem backend:
+
+1. Acesse o aplicativo e selecione "Busca por Placa"
+2. Digite uma placa (formato ABC1234 ou ABC1D23) ou clique em uma placa de exemplo
+3. As placas de demonstração (HHE7F34, FDP0389, ABC1234, XYZ5678) buscam dados reais da FIPE
+4. Para placas reais, é necessário configurar o backend com uma API externa
+
+**Placas de Exemplo Disponíveis:**
+- **HHE-7F34**: Volkswagen Gol 2020
+- **FDP-0389**: Fiat Uno 2018
+- **ABC-1234**: Chevrolet Onix 2019
+- **XYZ-5678**: Honda Civic 2021
+
+### 📋 Busca por Veículo (Recomendado) ⭐
+Funciona 100% online sem necessidade de backend.
+
+1. Selecione "Busca por Veículo" no topo
+2. Escolha o tipo de veículo (Carro, Moto ou Caminhão)
+3. Selecione a marca do veículo
+4. Escolha o modelo
+5. Selecione o ano
 6. Clique em "Consultar Valor FIPE"
 7. Veja o valor FIPE atualizado com todos os detalhes!
 
-### Busca por Placa
-A busca por placa requer um backend configurado com uma API externa de consulta de placas.
-No GitHub Pages, essa funcionalidade está desabilitada. Use a busca manual por veículo.
-
 ## ✨ Funcionalidades
 
+- ✅ **Busca por Placa**: Consulte veículos através da placa (com placas de demonstração disponíveis)
 - ✅ **Busca Manual Completa**: Consulte qualquer veículo selecionando marca, modelo e ano
+- ✅ **Toggle de Modos de Busca**: Alterne facilmente entre busca por placa e busca manual
+- ✅ **Placas de Demonstração**: 4 placas de exemplo que funcionam sem backend
 - ✅ **Dados Reais da Tabela FIPE**: Preços atualizados mensalmente
 - ✅ **Suporte a Múltiplos Tipos**: Carros, motos e caminhões
 - ✅ **Interface Intuitiva**: Design moderno e responsivo
+- ✅ **Validação de Placas**: Suporte para formato antigo (ABC1234) e Mercosul (ABC1D23)
 - ✅ **Sem Necessidade de Cadastro**: Use imediatamente
 - ✅ **100% Gratuito**: Sem custos ou limitações
 
