@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
 import ManualSearch from './components/ManualSearch.jsx';
+import PlateForm from './components/PlateForm.jsx';
+import DemoSection from './components/DemoSection.jsx';
 import VehicleResult from './components/VehicleResult.jsx';
-import { searchFipeByCodes } from './services/fipeService.js';
+import { searchFipeByCodes, searchFipeByVehicleData } from './services/fipeService.js';
+import { consultarPlaca } from './services/consultaService.js';
+import { isDemoPlate, getDemoPlateData } from './services/mockPlateData.js';
 
 const STATUS = {
   IDLE: 'idle',
@@ -10,10 +14,16 @@ const STATUS = {
   ERROR: 'error',
 };
 
+const SEARCH_MODE = {
+  PLATE: 'plate',
+  MANUAL: 'manual',
+};
+
 export default function App() {
   const [status, setStatus] = useState(STATUS.IDLE);
   const [result, setResult] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
+  const [searchMode, setSearchMode] = useState(SEARCH_MODE.PLATE);
 
   async function handleManualSubmit(vehicleData) {
     setStatus(STATUS.LOADING);
@@ -52,10 +62,69 @@ export default function App() {
     }
   }
 
+  async function handlePlateSubmit(plate) {
+    setStatus(STATUS.LOADING);
+    setResult(null);
+    setErrorMessage('');
+
+    try {
+      // Check if it's a demo plate
+      if (isDemoPlate(plate)) {
+        const demoData = getDemoPlateData(plate);
+        // For demo plates, fetch real FIPE data using vehicle information
+        const fipeData = await searchFipeByVehicleData({
+          brand: demoData.brand,
+          model: demoData.model,
+          year: demoData.year,
+          vehicleType: demoData.vehicleType
+        });
+
+        setResult({
+          plate: plate,
+          vehicle: {
+            brand: demoData.brand,
+            model: demoData.model,
+            year: demoData.year,
+            fuel: demoData.fuel,
+            color: demoData.color,
+          },
+          fipe: fipeData,
+          isDemo: true
+        });
+        setStatus(STATUS.SUCCESS);
+        return;
+      }
+
+      // Real plate lookup via backend API
+      const data = await consultarPlaca(plate);
+      setResult({
+        ...data,
+        isDemo: false
+      });
+      setStatus(STATUS.SUCCESS);
+    } catch (err) {
+      console.error('[App] Plate search error:', err);
+      setStatus(STATUS.ERROR);
+
+      if (err.status === 503) {
+        setErrorMessage(err.message || 'Backend não disponível. Use a busca manual por veículo.');
+      } else if (err.status === 404) {
+        setErrorMessage('Veículo não encontrado para a placa informada.');
+      } else {
+        setErrorMessage('Erro ao consultar a placa. Tente novamente ou use a busca manual.');
+      }
+    }
+  }
+
   function resetSearch() {
     setStatus(STATUS.IDLE);
     setResult(null);
     setErrorMessage('');
+  }
+
+  function handleModeChange(mode) {
+    setSearchMode(mode);
+    resetSearch();
   }
 
   return (
@@ -72,7 +141,31 @@ export default function App() {
 
       <main className="app-main">
         {status === STATUS.IDLE && (
-          <ManualSearch onSubmit={handleManualSubmit} loading={status === STATUS.LOADING} />
+          <>
+            <div className="search-mode-toggle">
+              <button
+                className={`mode-button ${searchMode === SEARCH_MODE.PLATE ? 'active' : ''}`}
+                onClick={() => handleModeChange(SEARCH_MODE.PLATE)}
+              >
+                🚗 Busca por Placa
+              </button>
+              <button
+                className={`mode-button ${searchMode === SEARCH_MODE.MANUAL ? 'active' : ''}`}
+                onClick={() => handleModeChange(SEARCH_MODE.MANUAL)}
+              >
+                📋 Busca por Veículo
+              </button>
+            </div>
+
+            {searchMode === SEARCH_MODE.PLATE ? (
+              <>
+                <PlateForm onSubmit={handlePlateSubmit} loading={status === STATUS.LOADING} />
+                <DemoSection onPlateSelect={handlePlateSubmit} />
+              </>
+            ) : (
+              <ManualSearch onSubmit={handleManualSubmit} loading={status === STATUS.LOADING} />
+            )}
+          </>
         )}
 
         {status === STATUS.LOADING && (
