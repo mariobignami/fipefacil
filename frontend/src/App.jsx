@@ -40,6 +40,8 @@ export default function App() {
         setErrorMessage('Placa inválida. Use o formato antigo (ABC1234) ou Mercosul (ABC1D23).');
       } else if (err.status === 404) {
         setErrorMessage('Veículo não encontrado para a placa informada.');
+      } else if (err.status === 503) {
+        setErrorMessage('Serviço de consulta por placa não disponível. Por favor, use a busca manual por veículo.');
       } else {
         setErrorMessage('Erro ao consultar. Verifique sua conexão e tente novamente.');
       }
