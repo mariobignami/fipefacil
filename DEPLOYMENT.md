@@ -2,11 +2,11 @@
 
 ## ✅ O que foi feito
 
-### 1. **Aplicação Convertida para Frontend Standalone**
-   - ✅ Removida dependência do backend
+### 1. **Aplicação Convertida para Frontend Standalone (Busca Manual)**
+   - ✅ Removida dependência do backend para busca manual
    - ✅ Consultas FIPE agora são feitas diretamente no navegador via fipe.parallelum.com.br
-   - ✅ Consultas de placa feitas diretamente no navegador via denatran.parallelum.com.br
-   - ✅ Funciona 100% estático (pode ser hospedado no GitHub Pages)
+   - ✅ **Busca por placa requer backend** - Consultas de placa devem ser feitas via backend configurado
+   - ✅ Frontend funciona 100% estático no GitHub Pages para busca manual
 
 ### 2. **GitHub Pages Configurado**
    - ✅ Vite configurado com base path correto (`/fipefacil/`)
@@ -56,7 +56,8 @@ Você pode acessar este link no seu celular, tablet ou computador!
 1. Na página inicial, selecione "Busca por Placa"
 2. Digite a placa do veículo (ex: ABC1234 ou ABC1D23)
 3. Clique em "Consultar"
-4. O aplicativo busca os dados do veículo via DENATRAN e o valor FIPE automaticamente
+4. **Nota**: Esta funcionalidade requer que você tenha o backend configurado e rodando localmente ou em um servidor
+5. Se o backend não estiver disponível, você verá uma mensagem pedindo para usar a busca manual
 
 ### Opção 2: Busca por Veículo
 1. Selecione "Busca por Veículo" no topo
@@ -95,8 +96,8 @@ fipefacil/
 ## 🎨 Funcionalidades
 
 ✅ **Interface Responsiva** - Funciona perfeitamente em celular
-✅ **Busca por Placa** - Via API DENATRAN Parallelum + FIPE automático
-✅ **Busca por Veículo** - Seleção de marca/modelo/ano
+✅ **Busca por Placa** - Via backend configurável (requer configuração)
+✅ **Busca por Veículo** - Seleção de marca/modelo/ano (funciona sem backend)
 ✅ **Dados Reais FIPE** - Consulta valores atualizados
 ✅ **Deploy Automático** - Atualizações automáticas via GitHub Actions
 ✅ **Sem Backend** - Funciona 100% no navegador
@@ -112,9 +113,14 @@ fipefacil/
 - Limpe o cache do navegador (Ctrl+Shift+R ou Cmd+Shift+R)
 
 ### A busca por placa retorna erro
-- Verifique se a placa está no formato correto (ABC1234 ou ABC1D23)
-- A API DENATRAN pode estar temporariamente indisponível; use a busca manual
-- Use a aba "Busca por Veículo" como alternativa
+- A busca por placa **requer que o backend esteja rodando e configurado**
+- O GitHub Pages hospeda apenas o frontend (arquivos estáticos)
+- Para usar busca por placa localmente:
+  1. Configure o backend conforme instruções no README.md
+  2. Configure o arquivo .env no backend com PLATE_API_PROVIDER (ex: brasilapi)
+  3. Inicie o backend com `npm start`
+  4. Configure o frontend com VITE_BACKEND_URL apontando para seu backend
+- **Recomendação**: Use a aba "Busca por Veículo" que funciona sem backend
 
 ### O workflow de deploy falhou
 1. Vá para https://github.com/mariobignami/fipefacil/actions

@@ -49,8 +49,16 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`FipeFácil backend running on http://localhost:${PORT}`);
-  if (!process.env.PLATE_API_KEY || !process.env.PLATE_API_URL) {
-    console.warn('[config] PLATE_API_KEY or PLATE_API_URL not set — plate lookups will be unavailable.');
+
+  const provider = process.env.PLATE_API_PROVIDER;
+  if (!provider) {
+    console.warn('[config] PLATE_API_PROVIDER not set — plate lookups will be unavailable.');
+    console.warn('[config] Set PLATE_API_PROVIDER in .env (e.g., "brasilapi", "apiplaca", "placafipe", or "custom")');
+  } else {
+    console.log(`[config] Plate API provider: ${provider}`);
+    if (provider !== 'brasilapi' && !process.env.PLATE_API_KEY) {
+      console.warn(`[config] PLATE_API_KEY not set for provider "${provider}" — plate lookups may fail.`);
+    }
   }
 });
 

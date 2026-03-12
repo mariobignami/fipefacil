@@ -31,9 +31,11 @@ Funciona 100% online sem necessidade de backend.
 6. Clique em "Consultar Valor FIPE"
 7. Veja o valor FIPE atualizado com todos os detalhes!
 
+**Nota sobre Busca por Placa**: A busca por placa requer que o backend esteja configurado e rodando com uma API de consulta de placas. Veja as instruções abaixo.
+
 ## ✨ Funcionalidades
 
-- ✅ **Busca por Placa**: Consulta via Parallelum DENATRAN API + valor FIPE automaticamente
+- ✅ **Busca por Placa**: Consulta via backend configurável (BrasilAPI gratuita ou APIs pagas) + valor FIPE automaticamente
 - ✅ **Busca Manual Completa**: Consulte qualquer veículo selecionando marca, modelo e ano
 - ✅ **Toggle de Modos de Busca**: Alterne facilmente entre busca por placa e busca manual
 - ✅ **Dados Reais da Tabela FIPE**: Preços atualizados mensalmente via fipe.parallelum.com.br
@@ -41,7 +43,7 @@ Funciona 100% online sem necessidade de backend.
 - ✅ **Interface Intuitiva**: Design moderno e responsivo
 - ✅ **Validação de Placas**: Suporte para formato antigo (ABC1234) e Mercosul (ABC1D23)
 - ✅ **Sem Necessidade de Cadastro**: Use imediatamente
-- ✅ **100% Gratuito**: Sem custos ou limitações
+- ✅ **Frontend 100% Gratuito**: Busca manual funciona sem custos
 
 ## 🛠️ Desenvolvimento Local
 
@@ -55,29 +57,51 @@ npm run dev
 
 O frontend estará disponível em `http://localhost:5173`
 
-### Backend (Opcional)
+### Backend (Necessário para Busca por Placa)
 
-O backend é opcional e necessário apenas para a funcionalidade de busca por placa.
-O frontend funciona de forma independente consultando a API FIPE diretamente.
+O backend é necessário para a funcionalidade de busca por placa.
+O frontend da busca manual funciona de forma independente consultando a API FIPE diretamente.
 
-Para habilitar a busca por placa:
+**Para habilitar a busca por placa:**
 
-1. Configure as variáveis de ambiente (copie `.env.example` para `.env`):
+1. Configure as variáveis de ambiente:
    ```bash
    cd backend
    cp .env.example .env
    ```
 
-2. Edite o `.env` e configure sua API de consulta de placas:
+2. Edite o `.env` e escolha um provedor de API de placas:
+
+   **Opção 1: BrasilAPI (Gratuito - Recomendado para testes)**
+   ```env
+   PLATE_API_PROVIDER=brasilapi
    ```
-   PLATE_API_KEY=sua_chave_api
-   PLATE_API_URL=https://api.example.com/consulta/{plate}
+   Não precisa de chave de API!
+
+   **Opção 2: ApiPlaca ou PlacaFipe (Pago)**
+   ```env
+   PLATE_API_PROVIDER=apiplaca  # ou placafipe
+   PLATE_API_KEY=sua_chave_aqui
+   ```
+
+   **Opção 3: API Customizada**
+   ```env
+   PLATE_API_PROVIDER=custom
+   PLATE_API_URL=https://sua-api.com/{plate}
+   PLATE_API_KEY=sua_chave_aqui
    ```
 
 3. Inicie o backend:
    ```bash
    npm install
    npm start
+   ```
+
+4. Configure o frontend para apontar para o backend:
+   ```bash
+   cd ../frontend
+   # Crie um arquivo .env com:
+   echo "VITE_BACKEND_URL=http://localhost:3001" > .env
    ```
 
 O backend estará disponível em `http://localhost:3001`
