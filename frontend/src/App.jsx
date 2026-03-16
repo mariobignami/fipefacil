@@ -66,22 +66,34 @@ export default function App() {
     setErrorMessage('');
 
     try {
-      // Step 1: Look up vehicle info from plate via Parallelum DENATRAN API
-      const vehicleData = await consultarPlaca(plate);
+      const plateLookup = await consultarPlaca(plate);
+      const vehicleData = plateLookup.vehicle;
 
-      if (!vehicleData.brand || !vehicleData.model) {
+      if (!vehicleData?.brand || !vehicleData?.model) {
         setStatus(STATUS.ERROR);
         setErrorMessage('Dados do veículo incompletos. Tente a busca manual por veículo.');
         return;
       }
 
-      // Step 2: Search FIPE using vehicle info — same API as manual car search
-      const fipeData = await searchFipeByVehicleData({
-        brand: vehicleData.brand,
-        model: vehicleData.model,
-        year: vehicleData.year,
-        vehicleType: vehicleData.vehicleType || 'cars',
-      });
+      let fipeData = plateLookup.fipe;
+
+      if (!fipeData) {
+        fipeData = await searchFipeByVehicleData({
+          brand: vehicleData.brand,
+          model: vehicleData.model,
+          year: vehicleData.year,
+          vehicleType: vehicleData.vehicleType || 'cars',
+        });
+      }
+
+      const errors = [...(plateLookup.errors || [])];
+
+      if (!fipeData) {
+        errors.push({
+          type: 'FIPE_NOT_FOUND',
+          message: 'Não foi possível encontrar o valor FIPE para estes dados. Tente a busca manual.'
+        });
+      }
 
       setResult({
         plate: plate,
@@ -94,6 +106,8 @@ export default function App() {
         },
         fipe: fipeData,
         isDemo: false,
+        sources: plateLookup.sources,
+        errors
       });
       setStatus(STATUS.SUCCESS);
     } catch (err) {

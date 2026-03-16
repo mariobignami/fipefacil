@@ -68,7 +68,8 @@ router.get('/', async (req, res) => {
       fipeData = await searchFipeByVehicleData({
         brand: vehicleData.brand,
         model: vehicleData.model,
-        year: vehicleData.year
+        year: vehicleData.year,
+        vehicleType: vehicleData.vehicleType
       });
       if (fipeData) {
         fipeProvider = 'fipe.parallelum.com.br';
@@ -95,7 +96,8 @@ router.get('/', async (req, res) => {
       model: vehicleData.model,
       year: vehicleData.year,
       fuel: vehicleData.fuel || (fipeData?.fuel),
-      color: vehicleData.color
+      color: vehicleData.color,
+      vehicleType: vehicleData.vehicleType
     } : null,
     fipe: fipeData,
     sources: {

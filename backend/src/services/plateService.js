@@ -1,5 +1,10 @@
 import axios from 'axios';
 
+const DEFAULT_TIMEOUT = 15000;
+const BRASIL_API_URL = 'https://brasilapi.com.br/api/placa/v1';
+const API_PLACA_URL = 'https://api.apiplaca.com.br/v1/placa';
+const PLACA_FIPE_URL = 'https://api.placafipe.com/consulta';
+
 /**
  * Supported plate lookup API providers:
  *
@@ -44,10 +49,8 @@ export async function lookupPlate(plate) {
 
 async function lookupWithBrasilAPI(plate) {
   try {
-    // Brasil API provides free vehicle data lookup
-    // Note: This is a real Brazilian public API
-    const response = await axios.get(`https://brasilapi.com.br/api/fipe/preco/v1/${plate}`, {
-      timeout: 15000
+    const response = await axios.get(`${BRASIL_API_URL}/${plate}`, {
+      timeout: DEFAULT_TIMEOUT
     });
 
     return normalizeVehicleData(response.data, 'brasilapi');
@@ -56,6 +59,11 @@ async function lookupWithBrasilAPI(plate) {
       const err = new Error('VEHICLE_NOT_FOUND');
       err.response = error.response;
       throw err;
+    }
+    if (error.response?.status === 429) {
+      const rateErr = new Error('RATE_LIMITED');
+      rateErr.response = error.response;
+      throw rateErr;
     }
     throw error;
   }
@@ -68,9 +76,9 @@ async function lookupWithApiPlaca(plate) {
     throw new Error('PLATE_API_KEY not configured for ApiPlaca');
   }
 
-  const response = await axios.get(`https://api.apiplaca.com.br/v1/placa/${plate}`, {
+  const response = await axios.get(`${API_PLACA_URL}/${plate}`, {
     headers: { 'Authorization': `Bearer ${apiKey}` },
-    timeout: 15000
+    timeout: DEFAULT_TIMEOUT
   });
 
   return normalizeVehicleData(response.data, 'apiplaca');
@@ -83,9 +91,9 @@ async function lookupWithPlacaFipe(plate) {
     throw new Error('PLATE_API_KEY not configured for PlacaFipe');
   }
 
-  const response = await axios.get(`https://api.placafipe.com/consulta/${plate}`, {
+  const response = await axios.get(`${PLACA_FIPE_URL}/${plate}`, {
     headers: { 'x-api-key': apiKey },
-    timeout: 15000
+    timeout: DEFAULT_TIMEOUT
   });
 
   return normalizeVehicleData(response.data, 'placafipe');
@@ -106,32 +114,79 @@ async function lookupWithCustomAPI(plate) {
 
   const response = await axios.get(apiUrl.replace('{plate}', plate), {
     headers,
-    timeout: 15000
+    timeout: DEFAULT_TIMEOUT
   });
 
   return normalizeVehicleData(response.data, 'custom');
 }
 
-function normalizeVehicleData(data, provider) {
-  // Normalize various API response formats to our standard format
+function normalizeKeys(raw) {
+  return Object.entries(raw || {}).reduce((acc, [key, value]) => {
+    acc[key.toLowerCase()] = value;
+    return acc;
+  }, {});
+}
+
+function pick(data, keys) {
+  for (const key of keys) {
+    const candidate = data[key.toLowerCase()];
+    if (candidate !== undefined && candidate !== null && candidate !== '') {
+      return candidate;
+    }
+  }
+  return null;
+}
+
+function normalizeYear(value) {
+  if (value === null || value === undefined) return null;
+  const str = String(value).trim();
+  const numeric = parseInt(str, 10);
+  return Number.isNaN(numeric) ? str : numeric;
+}
+
+function normalizeVehicleType(tipo) {
+  if (!tipo) return null;
+  const t = String(tipo).toLowerCase();
+  if (t.includes('moto')) return 'motorcycles';
+  if (t.includes('caminhao') || t.includes('truck') || t.includes('carga')) return 'trucks';
+  return 'cars';
+}
+
+export function normalizeVehicleData(rawData, provider) {
+  const data = normalizeKeys(rawData || {});
+
+  const yearFromModel = normalizeYear(
+    pick(data, ['anomodelo', 'ano_modelo', 'anoModelo', 'modelyear', 'ano_modelo_fabricacao'])
+  );
+  const yearFromFabrication = normalizeYear(
+    pick(data, ['ano', 'anofabricacao', 'ano_fabricacao', 'fabricationyear'])
+  );
+
   const normalized = {
-    brand: data.marca || data.MARCA || data.brand || null,
-    model: data.modelo || data.MODELO || data.model || null,
-    year: data.ano || data.ANO || data.year || null,
-    fuel: data.combustivel || data.COMBUSTIVEL || data.fuel || null,
-    fipeCode: data.codigoFipe || data.CODIGO_FIPE || data.fipe_code || null,
-    fipePrice: data.valorFipe || data.VALOR_FIPE || data.fipe_price || null,
-    fipeReferenceMonth: data.mesReferencia || data.MES_REFERENCIA || null,
-    color: data.cor || data.COR || data.color || null,
-    plate: data.placa || data.PLACA || data.plate || null,
+    brand: pick(data, ['marca', 'brand', 'fabricante', 'make']),
+    model: pick(data, ['modelo', 'model', 'veiculo', 'vehicle', 'descricao', 'nome']),
+    year: yearFromModel || yearFromFabrication,
+    fuel: pick(data, ['combustivel', 'fuel', 'tipo_combustivel', 'combustion']),
+    fipeCode: pick(data, ['codigofipe', 'codigo_fipe', 'codigoFipe', 'fipe_code', 'cod_fipe']),
+    fipePrice: pick(data, ['valorfipe', 'valor_fipe', 'valor', 'preco', 'price']),
+    fipeReferenceMonth: pick(data, ['mes_referencia', 'mesreferencia', 'data_referencia', 'mes']),
+    color: pick(data, ['cor', 'color']),
+    plate: pick(data, ['placa', 'plate']),
+    vehicleType: normalizeVehicleType(
+      pick(data, ['tipoveiculo', 'tipo_veiculo', 'tipo', 'segmento', 'categoria'])
+    ),
+    raw: rawData
   };
 
-  // Provider-specific normalizations
   if (provider === 'brasilapi') {
-    // BrasilAPI might return data in a different format
-    // Adjust as needed based on actual API response
-    normalized.brand = normalized.brand || data.fabricante;
-    normalized.model = normalized.model || data.veiculo;
+    // Some providers return the brand within the model string (e.g., "FIAT/UNO")
+    if (!normalized.brand && typeof normalized.model === 'string') {
+      const parts = normalized.model.split('/');
+      if (parts.length > 1) {
+        normalized.brand = parts[0];
+        normalized.model = parts.slice(1).join(' ').trim();
+      }
+    }
   }
 
   return normalized;

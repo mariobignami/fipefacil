@@ -20,6 +20,7 @@ A busca manual por veículo funciona 100% no navegador sem backend. Porém, a **
 - ✅ Mantido pela comunidade brasileira
 - ⚠️ Limitações de taxa de requisição
 - ⚠️ Pode estar indisponível em alguns momentos
+- 🔗 Endpoint: `https://brasilapi.com.br/api/placa/v1/{placa}` (marca, modelo, ano/modelo, combustível, cor; sem preço FIPE)
 
 **Configuração:**
 ```env
@@ -37,6 +38,7 @@ PLATE_API_PROVIDER=brasilapi
 - ✅ SLA e suporte comercial
 - ✅ Maior limite de requisições
 - 💰 Serviço pago (consulte planos em https://apiplaca.com.br)
+- 🔗 Endpoint: `https://api.apiplaca.com.br/v1/placa/{placa}` com header `Authorization: Bearer <sua_chave>`
 
 **Configuração:**
 1. Crie uma conta em https://apiplaca.com.br
@@ -55,6 +57,7 @@ PLATE_API_KEY=sua_chave_aqui
 - ✅ Integração direta com dados FIPE
 - ✅ Dados atualizados em tempo real
 - 💰 Serviço pago
+- 🔗 Endpoint: `https://api.placafipe.com/consulta/{placa}` com header `x-api-key: <sua_chave>`
 
 **Configuração:**
 ```env
