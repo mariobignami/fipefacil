@@ -154,6 +154,18 @@ Para a busca por placa funcionar em produção, você precisa:
 
 ---
 
+## 📚 Pesquisa rápida sobre APIs de placa
+
+- **BrasilAPI (`/placa/v1/{placa}`)**: gratuita, sem chave. Entrega `marca`, `modelo`, `anoModelo`, `combustivel`, `cor` e dados de município; sem preço FIPE. Sujeita a rate limit.
+- **ApiPlaca (`/v1/placa/{placa}`)**: pago, header `Authorization: Bearer <chave>`. Costuma trazer `codigo_fipe` e detalhes de veículo/chassi.
+- **PlacaFipe (`/consulta/{placa}`)**: pago, retorna `codigo_fipe` e já inclui `valor`/`mes_referencia` FIPE na resposta.
+- **Alternativas pagas (OlhoNoCarro, Bina, InfosCar)**: oferecem histórico e restrições, mas exigem contrato e não devem expor a chave no frontend — use `PLATE_API_URL` como proxy.
+
+Como cruzamos com a Tabela FIPE:
+1. Normalizamos marca/modelo/ano/combustível/cor a partir da API de placa e preservamos `codigo_fipe`/`valor` quando vierem.
+2. Se não houver preço FIPE, consultamos `https://fipe.parallelum.com.br/api/v2` usando a combinação de marca/modelo/ano.
+3. O frontend exibe os dados consolidados e mostra um aviso quando a busca FIPE não retornar valor.
+
 ## Resumo Executivo
 
 **O que estava errado:** API inexistente

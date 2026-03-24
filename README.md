@@ -106,6 +106,18 @@ O frontend da busca manual funciona de forma independente consultando a API FIPE
 
 O backend estará disponível em `http://localhost:3001`
 
+### Fontes de dados para busca por placa (resumo da pesquisa)
+
+- **BrasilAPI** (`https://brasilapi.com.br/api/placa/v1/{placa}`): gratuita, não exige chave, entrega marca, modelo, ano/modelo, combustível, cor e município; pode ter limites e indisponibilidade em horários de pico.
+- **ApiPlaca** (`https://api.apiplaca.com.br/v1/placa/{placa}`): serviço pago com header `Authorization: Bearer <chave>`, costuma entregar `codigo_fipe` e dados mais completos.
+- **PlacaFipe** (`https://api.placafipe.com/consulta/{placa}`): pago, retorna código e valor FIPE já na resposta.
+- **API customizada**: use `PLATE_API_URL` contendo `{plate}` para adaptar qualquer outra fonte (ex.: OlhoNoCarro, Bina, etc.).
+
+Fluxo usado pelo app para cruzar com a Tabela FIPE:
+1. O backend consulta o provedor configurado e normaliza marca, modelo, ano, combustível, cor, código/valor FIPE quando presentes.
+2. Se o provedor não trouxer preço FIPE, o backend cruza marca/modelo/ano com a API oficial `fipe.parallelum.com.br` para obter preço e código.
+3. O frontend recebe os dados já normalizados; se ainda faltar o preço FIPE, ele faz uma tentativa final usando os mesmos dados normalizados.
+
 ## 📦 Deploy
 
 O aplicativo é automaticamente implantado no GitHub Pages através de GitHub Actions sempre que há um push na branch `main`.

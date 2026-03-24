@@ -43,16 +43,13 @@ export async function consultarPlaca(plate) {
 
     const data = await response.json();
 
-    // Extract vehicle data from backend response
-    const vehicle = data.vehicle || {};
+    const vehicle = normalizeVehicle(data.vehicle || {});
 
     return {
-      brand: vehicle.brand || getField(vehicle, ['marca', 'MARCA']),
-      model: vehicle.model || getField(vehicle, ['modelo', 'MODELO']),
-      year: vehicle.year || getField(vehicle, ['ano', 'ANO']),
-      fuel: vehicle.fuel || getField(vehicle, ['combustivel', 'COMBUSTIVEL']),
-      color: vehicle.color || getField(vehicle, ['cor', 'COR']),
-      vehicleType: normalizeVehicleType(vehicle.vehicleType || getField(vehicle, ['tipo', 'TIPO'])),
+      vehicle,
+      fipe: normalizeFipe(data.fipe),
+      sources: data.sources || {},
+      errors: data.errors || []
     };
   } catch (err) {
     // Network error (e.g., backend not running)
@@ -75,4 +72,29 @@ function normalizeVehicleType(tipo) {
   if (t.includes('moto')) return 'motorcycles';
   if (t.includes('caminhao') || t.includes('truck')) return 'trucks';
   return 'cars';
+}
+
+function normalizeVehicle(vehicle) {
+  return {
+    brand: vehicle.brand || getField(vehicle, ['marca', 'MARCA']),
+    model: vehicle.model || getField(vehicle, ['modelo', 'MODELO', 'veiculo']),
+    year: vehicle.year || getField(vehicle, ['ano', 'ANO', 'anoModelo', 'ano_modelo']),
+    fuel: vehicle.fuel || getField(vehicle, ['combustivel', 'COMBUSTIVEL', 'combustible']),
+    color: vehicle.color || getField(vehicle, ['cor', 'COR']),
+    vehicleType: normalizeVehicleType(vehicle.vehicleType || getField(vehicle, ['tipo', 'TIPO', 'segmento'])),
+    plate: vehicle.plate || getField(vehicle, ['placa', 'PLACA']),
+  };
+}
+
+function normalizeFipe(fipe) {
+  if (!fipe) return null;
+  return {
+    code: fipe.code || fipe.codeFipe || fipe.codigo_fipe || fipe.fipeCode,
+    price: fipe.price || fipe.valor || fipe.valorFipe,
+    referenceMonth: fipe.referenceMonth || fipe.mesReferencia || fipe.mes_referencia,
+    brand: fipe.brand,
+    model: fipe.model,
+    year: fipe.year || fipe.modelYear,
+    fuel: fipe.fuel,
+  };
 }
