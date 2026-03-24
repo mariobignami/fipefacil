@@ -13,7 +13,7 @@ function InfoRow({ label, value }) {
 export default function VehicleResult({ data }) {
   if (!data) return null;
 
-  const { plate, vehicle, fipe, errors } = data;
+  const { vehicle, fipe, errors } = data;
 
   const hasVehicleData = vehicle && (vehicle.brand || vehicle.model);
   const hasFipeData = fipe && fipe.price;
@@ -21,11 +21,6 @@ export default function VehicleResult({ data }) {
 
   return (
     <div className="result-container">
-      {plate && (
-        <div className="result-plate-badge">
-          <span className="result-plate">{plate}</span>
-        </div>
-      )}
 
       {hasVehicleData && (
         <div className="result-card">
@@ -56,7 +51,7 @@ export default function VehicleResult({ data }) {
 
       {!hasVehicleData && !hasFipeData && (
         <div className="result-card result-card--empty">
-          <p>Nenhum dado encontrado para esta placa.</p>
+          <p>Nenhum dado encontrado para este veículo.</p>
         </div>
       )}
 
