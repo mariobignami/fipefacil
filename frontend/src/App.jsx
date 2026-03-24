@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import ManualSearch from './components/ManualSearch.jsx';
-import PlateForm from './components/PlateForm.jsx';
 import VehicleResult from './components/VehicleResult.jsx';
-import { searchFipeByCodes, searchFipeByVehicleData } from './services/fipeService.js';
-import { consultarPlaca } from './services/consultaService.js';
+import { searchFipeByCodes } from './services/fipeService.js';
 
 const STATUS = {
   IDLE: 'idle',
@@ -12,16 +10,10 @@ const STATUS = {
   ERROR: 'error',
 };
 
-const SEARCH_MODE = {
-  PLATE: 'plate',
-  MANUAL: 'manual',
-};
-
 export default function App() {
   const [status, setStatus] = useState(STATUS.IDLE);
   const [result, setResult] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
-  const [searchMode, setSearchMode] = useState(SEARCH_MODE.PLATE);
 
   async function handleManualSubmit(vehicleData) {
     setStatus(STATUS.LOADING);
@@ -38,7 +30,6 @@ export default function App() {
 
       if (fipeData) {
         setResult({
-          plate: null,
           vehicle: {
             brand: fipeData.brand,
             model: fipeData.model,
@@ -46,7 +37,6 @@ export default function App() {
             fuel: fipeData.fuel,
           },
           fipe: fipeData,
-          isDemo: false
         });
         setStatus(STATUS.SUCCESS);
       } else {
@@ -60,79 +50,10 @@ export default function App() {
     }
   }
 
-  async function handlePlateSubmit(plate) {
-    setStatus(STATUS.LOADING);
-    setResult(null);
-    setErrorMessage('');
-
-    try {
-      const plateLookup = await consultarPlaca(plate);
-      const vehicleData = plateLookup.vehicle;
-
-      if (!vehicleData?.brand || !vehicleData?.model) {
-        setStatus(STATUS.ERROR);
-        setErrorMessage('Dados do veículo incompletos. Tente a busca manual por veículo.');
-        return;
-      }
-
-      let fipeData = plateLookup.fipe;
-
-      if (!fipeData) {
-        fipeData = await searchFipeByVehicleData({
-          brand: vehicleData.brand,
-          model: vehicleData.model,
-          year: vehicleData.year,
-          vehicleType: vehicleData.vehicleType || 'cars',
-        });
-      }
-
-      const errors = [...(plateLookup.errors || [])];
-
-      if (!fipeData) {
-        errors.push({
-          type: 'FIPE_NOT_FOUND',
-          message: 'Não foi possível encontrar o valor FIPE para estes dados. Tente a busca manual.'
-        });
-      }
-
-      setResult({
-        plate: plate,
-        vehicle: {
-          brand: vehicleData.brand,
-          model: vehicleData.model,
-          year: vehicleData.year || fipeData?.year,
-          fuel: vehicleData.fuel || fipeData?.fuel,
-          color: vehicleData.color,
-        },
-        fipe: fipeData,
-        isDemo: false,
-        sources: plateLookup.sources,
-        errors
-      });
-      setStatus(STATUS.SUCCESS);
-    } catch (err) {
-      console.error('[App] Plate search error:', err);
-      setStatus(STATUS.ERROR);
-
-      if (err.status === 503) {
-        setErrorMessage(err.message || 'Serviço de consulta de placa indisponível. Use a busca manual por veículo.');
-      } else if (err.status === 404) {
-        setErrorMessage('Veículo não encontrado para a placa informada.');
-      } else {
-        setErrorMessage('Erro ao consultar a placa. Tente novamente ou use a busca manual.');
-      }
-    }
-  }
-
   function resetSearch() {
     setStatus(STATUS.IDLE);
     setResult(null);
     setErrorMessage('');
-  }
-
-  function handleModeChange(mode) {
-    setSearchMode(mode);
-    resetSearch();
   }
 
   return (
@@ -149,28 +70,7 @@ export default function App() {
 
       <main className="app-main">
         {status === STATUS.IDLE && (
-          <>
-            <div className="search-mode-toggle">
-              <button
-                className={`mode-button ${searchMode === SEARCH_MODE.PLATE ? 'active' : ''}`}
-                onClick={() => handleModeChange(SEARCH_MODE.PLATE)}
-              >
-                🚗 Busca por Placa
-              </button>
-              <button
-                className={`mode-button ${searchMode === SEARCH_MODE.MANUAL ? 'active' : ''}`}
-                onClick={() => handleModeChange(SEARCH_MODE.MANUAL)}
-              >
-                📋 Busca por Veículo
-              </button>
-            </div>
-
-            {searchMode === SEARCH_MODE.PLATE ? (
-              <PlateForm onSubmit={handlePlateSubmit} loading={status === STATUS.LOADING} />
-            ) : (
-              <ManualSearch onSubmit={handleManualSubmit} loading={status === STATUS.LOADING} />
-            )}
-          </>
+          <ManualSearch onSubmit={handleManualSubmit} loading={status === STATUS.LOADING} />
         )}
 
         {status === STATUS.LOADING && (
