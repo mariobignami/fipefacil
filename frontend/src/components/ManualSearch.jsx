@@ -96,7 +96,9 @@ export default function ManualSearch({ onSubmit, loading }) {
       brand: brandData?.name || '',
       model: modelData?.name || '',
       year: yearData?.name || '',
-      vehicleType
+      vehicleType,
+      models,
+      years,
     });
   }
 
