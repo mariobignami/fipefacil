@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getBrands, getModels, getYears } from '../services/fipeService.js';
+import SearchableSelect from './SearchableSelect.jsx';
 
 export default function ManualSearch({ onSubmit, loading }) {
   const [vehicleType, setVehicleType] = useState('cars');
@@ -125,62 +126,41 @@ export default function ManualSearch({ onSubmit, loading }) {
 
       <div className="form-group">
         <label htmlFor="brand">Marca</label>
-        <select
+        <SearchableSelect
           id="brand"
-          className="form-select"
           value={selectedBrand}
-          onChange={(e) => setSelectedBrand(e.target.value)}
+          onChange={setSelectedBrand}
+          options={brands}
           disabled={loading || loadingBrands || brands.length === 0}
-        >
-          <option value="">
-            {loadingBrands ? 'Carregando...' : 'Selecione a marca'}
-          </option>
-          {brands.map((brand) => (
-            <option key={brand.code} value={brand.code}>
-              {brand.name}
-            </option>
-          ))}
-        </select>
+          placeholder={loadingBrands ? 'Carregando...' : 'Selecione a marca'}
+          label="Marca"
+        />
       </div>
 
       <div className="form-group">
         <label htmlFor="model">Modelo</label>
-        <select
+        <SearchableSelect
           id="model"
-          className="form-select"
           value={selectedModel}
-          onChange={(e) => setSelectedModel(e.target.value)}
+          onChange={setSelectedModel}
+          options={models}
           disabled={loading || loadingModels || !selectedBrand || models.length === 0}
-        >
-          <option value="">
-            {loadingModels ? 'Carregando...' : selectedBrand ? 'Selecione o modelo' : 'Selecione a marca primeiro'}
-          </option>
-          {models.map((model) => (
-            <option key={model.code} value={model.code}>
-              {model.name}
-            </option>
-          ))}
-        </select>
+          placeholder={loadingModels ? 'Carregando...' : selectedBrand ? 'Selecione o modelo' : 'Selecione a marca primeiro'}
+          label="Modelo"
+        />
       </div>
 
       <div className="form-group">
         <label htmlFor="year">Ano</label>
-        <select
+        <SearchableSelect
           id="year"
-          className="form-select"
           value={selectedYear}
-          onChange={(e) => setSelectedYear(e.target.value)}
+          onChange={setSelectedYear}
+          options={years}
           disabled={loading || loadingYears || !selectedModel || years.length === 0}
-        >
-          <option value="">
-            {loadingYears ? 'Carregando...' : selectedModel ? 'Selecione o ano' : 'Selecione o modelo primeiro'}
-          </option>
-          {years.map((year) => (
-            <option key={year.code} value={year.code}>
-              {year.name}
-            </option>
-          ))}
-        </select>
+          placeholder={loadingYears ? 'Carregando...' : selectedModel ? 'Selecione o ano' : 'Selecione o modelo primeiro'}
+          label="Ano"
+        />
       </div>
 
       <button
