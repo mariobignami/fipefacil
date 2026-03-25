@@ -1,4 +1,5 @@
 import React from 'react';
+import PriceHistoryChart from './PriceHistoryChart.jsx';
 
 function InfoRow({ label, value }) {
   if (!value && value !== 0) return null;
@@ -10,7 +11,7 @@ function InfoRow({ label, value }) {
   );
 }
 
-export default function VehicleResult({ data }) {
+export default function VehicleResult({ data, priceHistory, historyLoading }) {
   if (!data) return null;
 
   const { vehicle, fipe, errors } = data;
@@ -46,6 +47,12 @@ export default function VehicleResult({ data }) {
             {fipe.model && <InfoRow label="Modelo (FIPE)" value={fipe.model} />}
             {fipe.fuel && <InfoRow label="Combustível" value={fipe.fuel} />}
           </div>
+        </div>
+      )}
+
+      {(historyLoading || (priceHistory && priceHistory.length >= 2)) && (
+        <div className="result-card result-card--history">
+          <PriceHistoryChart data={priceHistory} loading={historyLoading} />
         </div>
       )}
 

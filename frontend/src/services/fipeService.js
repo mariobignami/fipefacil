@@ -1,5 +1,13 @@
 const FIPE_BASE_URL = 'https://fipe.parallelum.com.br/api/v2';
 
+function parseFipePrice(priceStr) {
+  if (!priceStr) return 0;
+  const num = parseFloat(
+    priceStr.replace('R$', '').replace(/\./g, '').replace(',', '.').trim()
+  );
+  return isNaN(num) ? 0 : num;
+}
+
 // v2 API uses English vehicle type names
 const VEHICLE_TYPE_MAP = {
   carros: 'cars',
@@ -170,4 +178,65 @@ export async function getFipePrice(brandCode, modelCode, yearCode, vehicleType =
  */
 export async function searchFipeByCodes({ brandCode, modelCode, yearCode, vehicleType = 'cars' }) {
   return getFipePrice(brandCode, modelCode, yearCode, vehicleType);
+}
+
+/**
+ * Get all FIPE reference tables (list of available months)
+ * Returns array of {code, month} sorted newest first
+ */
+export async function getReferences() {
+  try {
+    const res = await fetch(`${FIPE_BASE_URL}/references`);
+    if (!res.ok) {
+      console.error('[fipeService] References endpoint returned', res.status);
+      return [];
+    }
+    return await res.json();
+  } catch (error) {
+    console.error('[fipeService] Error getting references:', error);
+    return [];
+  }
+}
+
+/**
+ * Fetch price history for a vehicle across reference months
+ * Returns array of {month, price, priceFormatted, referenceCode} sorted oldest first
+ */
+export async function fetchPriceHistory(brandCode, modelCode, yearCode, vehicleType = 'cars') {
+  const v2Type = VEHICLE_TYPE_MAP[vehicleType];
+  if (!v2Type || !brandCode || !modelCode || !yearCode) return [];
+
+  try {
+    const refs = await getReferences();
+    if (!refs.length) return [];
+
+    // Take at most 12 most recent reference months
+    const recent = refs.slice(0, 12);
+
+    const results = await Promise.allSettled(
+      recent.map(async (ref) => {
+        const res = await fetch(
+          `${FIPE_BASE_URL}/${v2Type}/brands/${brandCode}/models/${modelCode}/years/${yearCode}?reference=${ref.code}`
+        );
+        if (!res.ok) return null;
+        const data = await res.json();
+        const price = parseFipePrice(data.price);
+        if (!price) return null;
+        return {
+          month: ref.month || String(ref.code),
+          price,
+          priceFormatted: data.price || '',
+          referenceCode: ref.code,
+        };
+      })
+    );
+
+    return results
+      .filter((r) => r.status === 'fulfilled' && r.value)
+      .map((r) => r.value)
+      .reverse(); // Show oldest → newest left to right
+  } catch (error) {
+    console.error('[fipeService] Error fetching price history:', error);
+    return [];
+  }
 }

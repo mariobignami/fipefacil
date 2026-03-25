@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import ManualSearch from './components/ManualSearch.jsx';
 import VehicleResult from './components/VehicleResult.jsx';
-import { searchFipeByCodes } from './services/fipeService.js';
+import QuickSearch from './components/QuickSearch.jsx';
+import { searchFipeByCodes, fetchPriceHistory } from './services/fipeService.js';
 
 const STATUS = {
   IDLE: 'idle',
@@ -14,18 +15,22 @@ export default function App() {
   const [status, setStatus] = useState(STATUS.IDLE);
   const [result, setResult] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
+  const [vehicleContext, setVehicleContext] = useState(null);
+  const [priceHistory, setPriceHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
-  async function handleManualSubmit(vehicleData) {
+  async function runSearch(vehicleData) {
     setStatus(STATUS.LOADING);
     setResult(null);
     setErrorMessage('');
+    setPriceHistory([]);
 
     try {
       const fipeData = await searchFipeByCodes({
         brandCode: vehicleData.brandCode,
         modelCode: vehicleData.modelCode,
         yearCode: vehicleData.yearCode,
-        vehicleType: vehicleData.vehicleType
+        vehicleType: vehicleData.vehicleType,
       });
 
       if (fipeData) {
@@ -38,22 +43,48 @@ export default function App() {
           },
           fipe: fipeData,
         });
+        setVehicleContext(vehicleData);
         setStatus(STATUS.SUCCESS);
+
+        // Fetch price history in the background
+        setHistoryLoading(true);
+        fetchPriceHistory(
+          vehicleData.brandCode,
+          vehicleData.modelCode,
+          vehicleData.yearCode,
+          vehicleData.vehicleType
+        ).then((history) => {
+          setPriceHistory(history);
+          setHistoryLoading(false);
+        }).catch(() => {
+          setHistoryLoading(false);
+        });
       } else {
         setStatus(STATUS.ERROR);
         setErrorMessage('Não foi possível consultar o valor FIPE para este veículo.');
       }
     } catch (err) {
-      console.error('[App] Manual search error:', err);
+      console.error('[App] Search error:', err);
       setStatus(STATUS.ERROR);
       setErrorMessage('Erro ao consultar. Verifique sua internet e tente novamente.');
     }
+  }
+
+  function handleManualSubmit(vehicleData) {
+    return runSearch(vehicleData);
+  }
+
+  function handleQuickSearch(vehicleData) {
+    return runSearch(vehicleData);
   }
 
   function resetSearch() {
     setStatus(STATUS.IDLE);
     setResult(null);
     setErrorMessage('');
+    setVehicleContext(null);
+    setPriceHistory([]);
+    setHistoryLoading(false);
   }
 
   return (
@@ -96,7 +127,18 @@ export default function App() {
 
         {status === STATUS.SUCCESS && result && (
           <>
-            <VehicleResult data={result} />
+            {vehicleContext && vehicleContext.models && vehicleContext.models.length > 0 && (
+              <QuickSearch
+                vehicleContext={vehicleContext}
+                onSearch={handleQuickSearch}
+                loading={status === STATUS.LOADING}
+              />
+            )}
+            <VehicleResult
+              data={result}
+              priceHistory={priceHistory}
+              historyLoading={historyLoading}
+            />
             <div className="try-another">
               <button className="try-another-button" onClick={resetSearch}>
                 Nova Consulta
