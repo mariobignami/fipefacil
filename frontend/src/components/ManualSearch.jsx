@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getBrands, getModels, getYears } from '../services/fipeService.js';
+import { getBrands, getModels, getYears, getReferences } from '../services/fipeService.js';
 import SearchableSelect from './SearchableSelect.jsx';
 
 export default function ManualSearch({ onSubmit, loading }) {
@@ -7,14 +7,28 @@ export default function ManualSearch({ onSubmit, loading }) {
   const [brands, setBrands] = useState([]);
   const [models, setModels] = useState([]);
   const [years, setYears] = useState([]);
+  const [references, setReferences] = useState([]);
 
   const [selectedBrand, setSelectedBrand] = useState('');
   const [selectedModel, setSelectedModel] = useState('');
   const [selectedYear, setSelectedYear] = useState('');
+  const [selectedReference, setSelectedReference] = useState('');
 
   const [loadingBrands, setLoadingBrands] = useState(false);
   const [loadingModels, setLoadingModels] = useState(false);
   const [loadingYears, setLoadingYears] = useState(false);
+  const [loadingReferences, setLoadingReferences] = useState(false);
+
+  // Load reference months on mount
+  useEffect(() => {
+    async function loadReferences() {
+      setLoadingReferences(true);
+      const refList = await getReferences();
+      setReferences(refList);
+      setLoadingReferences(false);
+    }
+    loadReferences();
+  }, []);
 
   // Load brands when vehicle type changes
   useEffect(() => {
@@ -73,6 +87,12 @@ export default function ManualSearch({ onSubmit, loading }) {
 
       const yearList = await getYears(selectedBrand, selectedModel, vehicleType);
       setYears(yearList);
+
+      // Auto-select year if only one option is available
+      if (yearList.length === 1) {
+        setSelectedYear(yearList[0].code);
+      }
+
       setLoadingYears(false);
     }
     loadYears();
@@ -88,14 +108,17 @@ export default function ManualSearch({ onSubmit, loading }) {
     const brandData = brands.find(b => b.code === parseInt(selectedBrand));
     const modelData = models.find(m => m.code === parseInt(selectedModel));
     const yearData = years.find(y => y.code === selectedYear);
+    const referenceData = selectedReference ? references.find(r => r.code === parseInt(selectedReference)) : null;
 
     onSubmit({
       brandCode: selectedBrand,
       modelCode: selectedModel,
       yearCode: selectedYear,
+      referenceCode: selectedReference || null,
       brand: brandData?.name || '',
       model: modelData?.name || '',
       year: yearData?.name || '',
+      referenceMonth: referenceData?.month || null,
       vehicleType,
       models,
       years,
@@ -162,6 +185,19 @@ export default function ManualSearch({ onSubmit, loading }) {
           disabled={loading || loadingYears || !selectedModel || years.length === 0}
           placeholder={loadingYears ? 'Carregando...' : selectedModel ? 'Selecione o ano' : 'Selecione o modelo primeiro'}
           label="Ano"
+        />
+      </div>
+
+      <div className="form-group">
+        <label htmlFor="reference">Mês de Referência (Opcional)</label>
+        <SearchableSelect
+          id="reference"
+          value={selectedReference}
+          onChange={setSelectedReference}
+          options={references}
+          disabled={loading || loadingReferences}
+          placeholder={loadingReferences ? 'Carregando...' : 'Mês atual (deixe em branco para consultar o mês atual)'}
+          label="Mês de Referência"
         />
       </div>
 

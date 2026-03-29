@@ -31,6 +31,7 @@ export default function App() {
         modelCode: vehicleData.modelCode,
         yearCode: vehicleData.yearCode,
         vehicleType: vehicleData.vehicleType,
+        referenceCode: vehicleData.referenceCode || null,
       });
 
       if (fipeData) {

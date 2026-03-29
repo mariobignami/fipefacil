@@ -146,15 +146,18 @@ export async function getYears(brandCode, modelCode, vehicleType = 'cars') {
 
 /**
  * Get FIPE price for specific brand/model/year combination
+ * @param {string} referenceCode - Optional reference month code
  */
-export async function getFipePrice(brandCode, modelCode, yearCode, vehicleType = 'cars') {
+export async function getFipePrice(brandCode, modelCode, yearCode, vehicleType = 'cars', referenceCode = null) {
   const v2Type = VEHICLE_TYPE_MAP[vehicleType];
   if (!v2Type || !brandCode || !modelCode || !yearCode) return null;
 
   try {
-    const response = await fetch(
-      `${FIPE_BASE_URL}/${v2Type}/brands/${brandCode}/models/${modelCode}/years/${yearCode}`
-    );
+    const url = referenceCode
+      ? `${FIPE_BASE_URL}/${v2Type}/brands/${brandCode}/models/${modelCode}/years/${yearCode}?reference=${referenceCode}`
+      : `${FIPE_BASE_URL}/${v2Type}/brands/${brandCode}/models/${modelCode}/years/${yearCode}`;
+
+    const response = await fetch(url);
     if (!response.ok) return null;
     const data = await response.json();
 
@@ -176,8 +179,8 @@ export async function getFipePrice(brandCode, modelCode, yearCode, vehicleType =
 /**
  * Direct search by codes - used when user selects from dropdowns
  */
-export async function searchFipeByCodes({ brandCode, modelCode, yearCode, vehicleType = 'cars' }) {
-  return getFipePrice(brandCode, modelCode, yearCode, vehicleType);
+export async function searchFipeByCodes({ brandCode, modelCode, yearCode, vehicleType = 'cars', referenceCode = null }) {
+  return getFipePrice(brandCode, modelCode, yearCode, vehicleType, referenceCode);
 }
 
 /**
