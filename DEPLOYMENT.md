@@ -8,7 +8,7 @@
    - ✅ Sem necessidade de backend ou servidor
 
 ### 2. **GitHub Pages Configurado**
-   - ✅ Vite configurado com base path correto (`/fipefacil/`)
+   - ✅ Vite configurado com base path relativo (`./`) para funcionar em qualquer caminho (root ou subpasta)
    - ✅ GitHub Actions workflow criado para deploy automático
    - ✅ Build testado e funcionando
 
