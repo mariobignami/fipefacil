@@ -19,6 +19,15 @@ export default function ManualSearch({ onSubmit, loading }) {
   const [loadingYears, setLoadingYears] = useState(false);
   const [loadingReferences, setLoadingReferences] = useState(false);
 
+  const [errorBrands, setErrorBrands] = useState(false);
+  const [errorModels, setErrorModels] = useState(false);
+  const [errorYears, setErrorYears] = useState(false);
+
+  // Retry loading brands
+  function retryLoadBrands() {
+    setVehicleType(vehicleType); // This will trigger the useEffect
+  }
+
   // Load reference months on mount
   useEffect(() => {
     async function loadReferences() {
@@ -34,6 +43,7 @@ export default function ManualSearch({ onSubmit, loading }) {
   useEffect(() => {
     async function loadBrands() {
       setLoadingBrands(true);
+      setErrorBrands(false);
       setBrands([]);
       setModels([]);
       setYears([]);
@@ -43,6 +53,7 @@ export default function ManualSearch({ onSubmit, loading }) {
 
       const brandList = await getBrands(vehicleType);
       setBrands(brandList);
+      setErrorBrands(brandList.length === 0);
       setLoadingBrands(false);
     }
     loadBrands();
@@ -55,11 +66,13 @@ export default function ManualSearch({ onSubmit, loading }) {
       setYears([]);
       setSelectedModel('');
       setSelectedYear('');
+      setErrorModels(false);
       return;
     }
 
     async function loadModels() {
       setLoadingModels(true);
+      setErrorModels(false);
       setModels([]);
       setYears([]);
       setSelectedModel('');
@@ -67,6 +80,7 @@ export default function ManualSearch({ onSubmit, loading }) {
 
       const modelList = await getModels(selectedBrand, vehicleType);
       setModels(modelList);
+      setErrorModels(modelList.length === 0);
       setLoadingModels(false);
     }
     loadModels();
@@ -77,16 +91,19 @@ export default function ManualSearch({ onSubmit, loading }) {
     if (!selectedModel) {
       setYears([]);
       setSelectedYear('');
+      setErrorYears(false);
       return;
     }
 
     async function loadYears() {
       setLoadingYears(true);
+      setErrorYears(false);
       setYears([]);
       setSelectedYear('');
 
       const yearList = await getYears(selectedBrand, selectedModel, vehicleType);
       setYears(yearList);
+      setErrorYears(yearList.length === 0);
 
       // Auto-select year if only one option is available
       if (yearList.length === 1) {
@@ -133,6 +150,23 @@ export default function ManualSearch({ onSubmit, loading }) {
       <p className="manual-search-description">
         Selecione o tipo, marca, modelo e ano para consultar o valor FIPE
       </p>
+
+      {errorBrands && (
+        <div className="error-banner" role="alert" style={{ marginBottom: '1rem' }}>
+          <span className="error-icon">⚠️</span>
+          <p style={{ marginBottom: '0.5rem' }}>
+            Não foi possível carregar as marcas. Verifique sua conexão com a internet.
+          </p>
+          <button
+            type="button"
+            className="submit-btn"
+            onClick={retryLoadBrands}
+            style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+          >
+            Tentar Novamente
+          </button>
+        </div>
+      )}
 
       <div className="form-group">
         <label htmlFor="vehicle-type">Tipo de Veículo</label>
