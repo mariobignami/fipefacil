@@ -1,4 +1,6 @@
 const express = require('express');
+const cors = require('cors');
+
 const {
   SOURCE_URL,
   normalizePlateInput,
@@ -7,6 +9,12 @@ const {
 } = require('./plateScraper.js');
 
 const app = express();
+
+// Permite que o frontend hospedado no GitHub Pages acesse a API
+app.use(cors({
+  origin: 'https://mariobignami.github.io',
+}));
+
 const PORT = process.env.PORT || 3001;
 
 app.get('/api/placa', async (req, res) => {
@@ -43,6 +51,7 @@ app.get('/api/placa', async (req, res) => {
     }
 
     const html = await response.text();
+
     const parsed = parsePlateHtml(html, normalizedPlate);
 
     if (parsed.type === 'not_found') {
@@ -72,6 +81,7 @@ app.get('/api/placa', async (req, res) => {
     return res.json(parsed.data);
   } catch (error) {
     const isAbortError = error?.name === 'AbortError';
+
     return res.status(503).json({
       error: {
         code: isAbortError ? 'SOURCE_TIMEOUT' : 'SOURCE_UNAVAILABLE',
@@ -85,6 +95,6 @@ app.get('/api/placa', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`[plate-proxy] Running at http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`[plate-proxy] Running on port ${PORT}`);
 });
