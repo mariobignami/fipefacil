@@ -116,6 +116,40 @@ body {
   padding: 2rem 1rem 3rem;
 }
 
+.search-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  background: var(--color-white);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow);
+}
+
+.search-tab {
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.75rem 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.search-tab:hover {
+  color: var(--color-text);
+}
+
+.search-tab--active {
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+  border-color: rgba(22, 163, 74, 0.2);
+}
+
 .submit-btn {
   padding: 0.875rem 1.5rem;
   background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
@@ -612,6 +646,40 @@ body {
 .manual-search-btn {
   width: 100%;
   margin-top: 0.5rem;
+}
+
+.plate-input {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.same-year-table-wrapper {
+  overflow-x: auto;
+}
+
+.same-year-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.same-year-table th,
+.same-year-table td {
+  text-align: left;
+  font-size: 0.875rem;
+  padding: 0.625rem 0.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.same-year-table th {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.empty-inline-message {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
 }
 
 /* Searchable Select Component */
