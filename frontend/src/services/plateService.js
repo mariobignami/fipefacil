@@ -8,6 +8,19 @@ export function isValidPlate(value) {
   return /^(?:[A-Z]{3}\d{4}|[A-Z]{3}\d[A-Z]\d{2})$/.test(value);
 }
 
+export function detectPlateFormat(value) {
+  const plate = normalizePlateInput(value);
+  if (/^[A-Z]{3}\d{4}$/.test(plate)) return 'old';
+  if (/^[A-Z]{3}\d[A-Z]\d{2}$/.test(plate)) return 'mercosul';
+  return 'unknown';
+}
+
+export function formatPlateDisplay(value, format) {
+  const plate = normalizePlateInput(value).padEnd(7, '•').slice(0, 7);
+  if (format === 'old') return `${plate.slice(0, 3)}-${plate.slice(3, 7)}`;
+  return plate;
+}
+
 export async function searchByPlate(plate) {
   const normalizedPlate = normalizePlateInput(plate);
 
@@ -20,7 +33,9 @@ export async function searchByPlate(plate) {
   }
 
   try {
-    const response = await fetch(`/api/placa?placa=${encodeURIComponent(normalizedPlate)}`);
+    const response = await fetch(
+      `${PLATE_API_BASE}/api/placa?placa=${encodeURIComponent(normalizedPlate)}`
+    );
     const payload = await response.json();
 
     if (!response.ok) {
@@ -44,3 +59,4 @@ export async function searchByPlate(plate) {
     };
   }
 }
+const PLATE_API_BASE = import.meta.env.VITE_PLATE_API_BASE || '';
