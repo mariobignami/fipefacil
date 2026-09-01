@@ -2,7 +2,10 @@ import React, { useState } from 'react';
 import ManualSearch from './components/ManualSearch.jsx';
 import VehicleResult from './components/VehicleResult.jsx';
 import QuickSearch from './components/QuickSearch.jsx';
+import PlateSearch from './components/PlateSearch.jsx';
+import PlateResult from './components/PlateResult.jsx';
 import { searchFipeByCodes, fetchPriceHistory } from './services/fipeService.js';
+import { searchByPlate } from './services/plateService.js';
 
 const STATUS = {
   IDLE: 'idle',
@@ -12,12 +15,14 @@ const STATUS = {
 };
 
 export default function App() {
+  const [activeTab, setActiveTab] = useState('manual');
   const [status, setStatus] = useState(STATUS.IDLE);
   const [result, setResult] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [vehicleContext, setVehicleContext] = useState(null);
   const [priceHistory, setPriceHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [resultType, setResultType] = useState(null);
 
   async function runSearch(vehicleData) {
     setStatus(STATUS.LOADING);
@@ -43,6 +48,7 @@ export default function App() {
           },
           fipe: fipeData,
         });
+        setResultType('manual');
         setVehicleContext(vehicleData);
         setStatus(STATUS.SUCCESS);
 
@@ -78,9 +84,31 @@ export default function App() {
     return runSearch(vehicleData);
   }
 
+  async function handlePlateSubmit(plateInput) {
+    setStatus(STATUS.LOADING);
+    setResult(null);
+    setResultType(null);
+    setErrorMessage('');
+    setPriceHistory([]);
+    setVehicleContext(null);
+
+    const response = await searchByPlate(plateInput);
+
+    if (!response.ok) {
+      setStatus(STATUS.ERROR);
+      setErrorMessage(response.message);
+      return;
+    }
+
+    setResult(response.data);
+    setResultType('plate');
+    setStatus(STATUS.SUCCESS);
+  }
+
   function resetSearch() {
     setStatus(STATUS.IDLE);
     setResult(null);
+    setResultType(null);
     setErrorMessage('');
     setVehicleContext(null);
     setPriceHistory([]);
@@ -101,13 +129,42 @@ export default function App() {
 
       <main className="app-main">
         {status === STATUS.IDLE && (
-          <ManualSearch onSubmit={handleManualSubmit} loading={status === STATUS.LOADING} />
+          <div className="search-tabs" role="tablist" aria-label="Modo de consulta">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'manual'}
+              className={`search-tab ${activeTab === 'manual' ? 'search-tab--active' : ''}`}
+              onClick={() => setActiveTab('manual')}
+            >
+              Busca manual
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'plate'}
+              className={`search-tab ${activeTab === 'plate' ? 'search-tab--active' : ''}`}
+              onClick={() => setActiveTab('plate')}
+            >
+              Consulta por Placa
+            </button>
+          </div>
+        )}
+
+        {status === STATUS.IDLE && (
+          activeTab === 'manual' ? (
+            <ManualSearch onSubmit={handleManualSubmit} loading={status === STATUS.LOADING} />
+          ) : (
+            <PlateSearch onSubmit={handlePlateSubmit} loading={status === STATUS.LOADING} />
+          )
         )}
 
         {status === STATUS.LOADING && (
           <div className="loading-container" aria-live="polite">
             <div className="loading-spinner" />
-            <p className="loading-text">Consultando dados do veículo...</p>
+            <p className="loading-text">
+              {activeTab === 'plate' ? 'Consultando placa e dados FIPE...' : 'Consultando dados do veículo...'}
+            </p>
           </div>
         )}
 
@@ -125,7 +182,7 @@ export default function App() {
           </>
         )}
 
-        {status === STATUS.SUCCESS && result && (
+        {status === STATUS.SUCCESS && result && resultType === 'manual' && (
           <>
             {vehicleContext && vehicleContext.models && vehicleContext.models.length > 0 && (
               <QuickSearch
@@ -146,10 +203,24 @@ export default function App() {
             </div>
           </>
         )}
+
+        {status === STATUS.SUCCESS && result && resultType === 'plate' && (
+          <>
+            <PlateResult data={result} />
+            <div className="try-another">
+              <button className="try-another-button" onClick={resetSearch}>
+                Nova Consulta
+              </button>
+            </div>
+          </>
+        )}
       </main>
 
       <footer className="app-footer">
-        <p>Dados da Tabela FIPE fornecidos por <a href="https://fipe.parallelum.com.br" target="_blank" rel="noopener noreferrer">fipe.parallelum.com.br</a></p>
+        <p>
+          Dados FIPE por <a href="https://fipe.parallelum.com.br" target="_blank" rel="noopener noreferrer">fipe.parallelum.com.br</a> e consulta por placa via
+          {' '}<a href="https://www.tabelafipebrasil.com/placa" target="_blank" rel="noopener noreferrer">tabelafipebrasil.com/placa</a>.
+        </p>
       </footer>
     </div>
   );
