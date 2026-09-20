@@ -27,8 +27,9 @@ services:
       # Libera o CORS para o frontend publicado no GitHub Pages.
       - key: ALLOWED_ORIGINS
         value: https://mariobignami.github.io
-      # Endpoint CDP do Browserless. Ex.:
-      #   wss://production-sfo.browserless.io?token=SEU_TOKEN
+      # Endpoint CDP do Browserless. A fonte bloqueia IPs de datacenter, então
+      # é obrigatório usar proxy residencial (rota /stealth + proxy=residential):
+      #   wss://production-sfo.browserless.io/stealth?token=SEU_TOKEN&emulationOs=windows&proxy=residential&proxyCountry=br&proxySticky=true
       # sync: false = o valor é pedido no dashboard (não fica no repositório).
       - key: PLATE_BROWSER_WS_ENDPOINT
         sync: false

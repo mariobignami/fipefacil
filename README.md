@@ -89,10 +89,19 @@ via CDP). Assim o serviço no Render é um Node comum: leve e sem Chromium.
 
 1. Crie uma conta em [browserless.io](https://www.browserless.io/) e copie a
    **API token** (Dashboard → API Keys).
-2. Monte a URL do endpoint CDP:
+2. Monte a URL do endpoint CDP. **Atenção:** como a fonte bloqueia IPs de
+   datacenter, é obrigatório usar a rota stealth **com proxy residencial** —
+   sem o proxy o site responde `403 Attention Required`:
    ```
-   wss://production-sfo.browserless.io?token=SEU_TOKEN
+   wss://production-sfo.browserless.io/stealth?token=SEU_TOKEN&emulationOs=windows&proxy=residential&proxyCountry=br&proxySticky=true
    ```
+   | Parâmetro | Para que serve |
+   | --- | --- |
+   | `/stealth` | navegador endurecido contra detecção de bot |
+   | `emulationOs=windows` | fingerprint coerente de Windows (o padrão do Browserless é Linux) |
+   | `proxy=residential` | sai por IP residencial — **essencial** para passar pelo Cloudflare da fonte |
+   | `proxyCountry=br` | IP do Brasil (o site é brasileiro) |
+   | `proxySticky=true` | mantém o mesmo IP durante a sessão |
 3. Suba o código para o GitHub (o `render.yaml` já está na raiz).
 4. Em [dashboard.render.com](https://dashboard.render.com) → **New** → **Blueprint** → selecione o repositório.
    Quando o Render pedir `PLATE_BROWSER_WS_ENDPOINT`, cole a URL do passo 2.
@@ -153,7 +162,8 @@ docker run -p 3001:3001 \
 | --- | --- | --- |
 | `PORT` | `3001` | Porta HTTP do backend |
 | `ALLOWED_ORIGINS` | `https://mariobignami.github.io` | Origens CORS liberadas (separadas por vírgula) |
-| `PLATE_BROWSER_WS_ENDPOINT` | *(vazio)* | Endpoint CDP de navegador remoto (ex.: Browserless). **Vazio = Chromium local** |
+| `PLATE_BROWSER_WS_ENDPOINT` | *(vazio)* | Endpoint CDP de navegador remoto (ex.: Browserless `/stealth` + `proxy=residential`). **Vazio = Chromium local** |
+| `PLATE_USER_AGENT` | *(vazio)* | Sobrescreve o User-Agent. **Deixe vazio**: o navegador já envia um UA coerente com o próprio fingerprint |
 | `PLATE_BROWSER_CHANNEL` | *(vazio)* | Canal do navegador local (`chrome`/`msedge`; vazio = Chromium do Playwright) |
 | `PLATE_BROWSER_HEADLESS` | `true` | `false` abre o navegador local visível (útil para depurar o desafio) |
 | `PLATE_BROWSER_IDLE_MS` | `300000` | Tempo ocioso antes de fechar o navegador **local** e liberar memória |
@@ -191,7 +201,7 @@ Este projeto é de código aberto e está disponível para uso pessoal e educaci
 
 | Sintoma | Causa provável | Solução |
 | --- | --- | --- |
-| `SOURCE_BLOCKED` (503) | Cloudflare bloqueou o acesso automático | Verifique se o Chromium está instalado no servidor (`npx playwright install --with-deps chromium`) ou use o modo remoto (`PLATE_BROWSER_WS_ENDPOINT`). |
+| `SOURCE_BLOCKED` (503) | Cloudflare recusou o acesso (IP de datacenter) | Use navegador remoto com **proxy residencial** (`proxy=residential` na URL do Browserless). Chromium em datacenter sem proxy é bloqueado pela fonte. |
 | `SOURCE_RATE_LIMITED` (429) | Muitas consultas seguidas à fonte | Espere alguns minutos; o cache de 10 min reduz a frequência |
 | `BROWSER_UNAVAILABLE` (500) | Falha ao iniciar o Chromium **ou** ao conectar no navegador remoto | Confira `PLATE_BROWSER_WS_ENDPOINT`/token, ou rode `npm run browser:install:deps` no modo local |
 | `BACKEND_NOT_CONFIGURED` no navegador | Build do frontend sem `VITE_PLATE_API_BASE` | Configure a variable no GitHub Actions e refaça o deploy |

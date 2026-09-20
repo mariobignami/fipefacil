@@ -53,9 +53,18 @@ const config = {
   browserChannel: process.env.PLATE_BROWSER_CHANNEL || '',
   headless: process.env.PLATE_BROWSER_HEADLESS !== 'false',
   blockAssets: process.env.PLATE_BLOCK_ASSETS !== 'false',
-  userAgent: process.env.PLATE_USER_AGENT || DEFAULT_USER_AGENT,
-  // Endpoint CDP de um navegador remoto (ex.: wss://production-sfo.browserless.io).
+  // Por padrão NÃO sobrescrevemos o User-Agent: o navegador (local ou remoto)
+  // já envia um UA coerente com o próprio fingerprint. Forçar um UA diferente
+  // cria inconsistência com os Client Hints e facilita a detecção de bot.
+  // Use PLATE_USER_AGENT apenas se precisar de um valor específico.
+  userAgent: process.env.PLATE_USER_AGENT || '',
+  // Endpoint CDP de um navegador remoto (ex.: Browserless).
   // Vazio = navegador local do Playwright.
+  //
+  // IMPORTANTE: a fonte bloqueia IPs de datacenter, então o endpoint precisa de
+  // proxy residencial. URL recomendada (Browserless):
+  //   wss://production-sfo.browserless.io/stealth?token=SEU_TOKEN
+  //     &emulationOs=windows&proxy=residential&proxyCountry=br&proxySticky=true
   wsEndpoint:
     process.env.PLATE_BROWSER_WS_ENDPOINT || process.env.BROWSER_WS_ENDPOINT || '',
 };
@@ -183,7 +192,7 @@ async function buildContextOptions() {
   return {
     locale: 'pt-BR',
     timezoneId: 'America/Sao_Paulo',
-    userAgent: config.userAgent,
+    ...(config.userAgent ? { userAgent: config.userAgent } : {}),
     viewport: { width: 1366, height: 900 },
     ignoreHTTPSErrors: false,
   };
@@ -251,7 +260,13 @@ async function loadPlateHtml(context, url) {
       throw new PlateFetchError(
         'SOURCE_BLOCKED',
         'O Cloudflare da fonte não liberou o acesso nem para o navegador headless.',
-        { status, url, browserMode: browserMode() }
+        {
+          status,
+          url,
+          browserMode: browserMode(),
+          hint:
+            'IPs de datacenter são bloqueados pela fonte. Configure o navegador remoto com proxy residencial (ex.: /stealth?...&proxy=residential&proxyCountry=br).',
+        }
       );
     }
 
@@ -368,7 +383,7 @@ async function fetchWithHttp(url, { timeoutMs } = {}) {
       redirect: 'follow',
       signal: controller.signal,
       headers: {
-        'User-Agent': config.userAgent,
+        'User-Agent': config.userAgent || DEFAULT_USER_AGENT,
         Accept:
           'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
         'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
@@ -467,7 +482,13 @@ async function fetchPlateHtml(plate) {
       throw new PlateFetchError(
         'SOURCE_BLOCKED',
         `A fonte respondeu ${browserResult.status} mesmo com navegador headless.`,
-        { status: browserResult.status, url, attempts }
+        {
+          status: browserResult.status,
+          url,
+          attempts,
+          hint:
+            'IPs de datacenter são bloqueados pela fonte. Configure o navegador remoto com proxy residencial (ex.: /stealth?...&proxy=residential&proxyCountry=br).',
+        }
       );
     }
   }
