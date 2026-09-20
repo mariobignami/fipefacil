@@ -108,10 +108,11 @@ via CDP). Assim o serviço no Render é um Node comum: leve e sem Chromium.
 5. Aguarde o build e copie a URL do serviço (ex.: `https://fipefacil-api.onrender.com`).
 6. Teste: `https://fipefacil-api.onrender.com/` deve responder
    `{"status":"ok", ..., "browserMode":"remote"}`.
-7. No GitHub, cadastre a URL do backend para o build do frontend:
+7. No GitHub, a URL do backend já vem por padrão do workflow
+   (`VITE_PLATE_API_BASE` = `https://fipefacil-api.onrender.com`). Se quiser
+   apontar para outro host, cadastre a variable em
    **Settings → Secrets and variables → Actions → Variables → New repository variable**
-   - Nome: `VITE_PLATE_API_BASE`
-   - Valor: `https://fipefacil-api.onrender.com`
+   (nome `VITE_PLATE_API_BASE`), que ela tem prioridade sobre o padrão.
 8. Rode o workflow de deploy do frontend (push na `main` ou **Actions → Deploy to GitHub Pages → Run workflow**).
 
 > ⚠️ O token do Browserless é segredo: cadastre só no painel do Render (o

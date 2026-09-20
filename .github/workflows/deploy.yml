@@ -36,11 +36,14 @@ jobs:
 
       - name: Build
         env:
-          # Configure em Settings > Secrets and variables > Actions > Variables
-          # Ex.: https://fipefacil-api.onrender.com
-          VITE_PLATE_API_BASE: ${{ vars.VITE_PLATE_API_BASE }}
+          # Ordem de prioridade:
+          #   1. Variable VITE_PLATE_API_BASE (Settings > Secrets and variables > Actions > Variables)
+          #   2. Secret VITE_PLATE_API_BASE (caso tenha sido criado como secret)
+          #   3. Backend padrão do projeto (URL pública, não é segredo)
+          VITE_PLATE_API_BASE: ${{ vars.VITE_PLATE_API_BASE || secrets.VITE_PLATE_API_BASE || 'https://fipefacil-api.onrender.com' }}
         run: |
           cd frontend
+          echo "Build usando VITE_PLATE_API_BASE=$VITE_PLATE_API_BASE"
           npm run build
           touch dist/.nojekyll
 
