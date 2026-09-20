@@ -64,21 +64,108 @@ npm run dev
 
 Frontend em `http://localhost:5173` e backend/proxy em `http://localhost:3001`.
 
+> O consulta por placa usa navegador headless. Se o Chromium do Playwright não
+> estiver baixado, rode `npm run browser:install` — o backend também cai
+> automaticamente para o Chrome/Edge instalado na máquina, se houver.
+
 ## 📦 Deploy
 
-O frontend estático é implantado no GitHub Pages via GitHub Actions.
+O projeto tem **duas partes** e cada uma vai para um lugar diferente:
 
-> ⚠️ **Importante:** o GitHub Pages não hospeda Node.js/Express.  
-> A **consulta por placa** precisa do endpoint `/api/placa` (backend scraping) rodando em servidor próprio.
+| Parte | O que é | Onde roda |
+| --- | --- | --- |
+| Frontend (React) | arquivos estáticos | **GitHub Pages** (já automatizado) |
+| Backend (`/api/placa`) | Node + Chromium (scraping) | precisa de um host que rode processos, ex.: **Render** |
 
-Para produção completa (manual + placa), publique também o backend (`frontend/server/index.js`) em uma plataforma com Node.js e configure o frontend para apontar para esse host.
+> ⚠️ O GitHub Pages **só serve arquivos estáticos** — ele não executa Node.js,
+> não roda navegador e não responde `/api/placa`. O GitHub Actions também não
+> serve para hospedar: ele só executa tarefas rápidas durante o build/deploy.
+> Sem um host para o backend, a consulta por placa não funciona em produção.
 
-Exemplo de configuração:
+### Passo a passo do backend no Render (com Browserless)
+
+O navegador usado para passar pelo Cloudflare roda **fora** do backend (Browserless,
+via CDP). Assim o serviço no Render é um Node comum: leve e sem Chromium.
+
+1. Crie uma conta em [browserless.io](https://www.browserless.io/) e copie a
+   **API token** (Dashboard → API Keys).
+2. Monte a URL do endpoint CDP:
+   ```
+   wss://production-sfo.browserless.io?token=SEU_TOKEN
+   ```
+3. Suba o código para o GitHub (o `render.yaml` já está na raiz).
+4. Em [dashboard.render.com](https://dashboard.render.com) → **New** → **Blueprint** → selecione o repositório.
+   Quando o Render pedir `PLATE_BROWSER_WS_ENDPOINT`, cole a URL do passo 2.
+5. Aguarde o build e copie a URL do serviço (ex.: `https://fipefacil-api.onrender.com`).
+6. Teste: `https://fipefacil-api.onrender.com/` deve responder
+   `{"status":"ok", ..., "browserMode":"remote"}`.
+7. No GitHub, cadastre a URL do backend para o build do frontend:
+   **Settings → Secrets and variables → Actions → Variables → New repository variable**
+   - Nome: `VITE_PLATE_API_BASE`
+   - Valor: `https://fipefacil-api.onrender.com`
+8. Rode o workflow de deploy do frontend (push na `main` ou **Actions → Deploy to GitHub Pages → Run workflow**).
+
+> ⚠️ O token do Browserless é segredo: cadastre só no painel do Render (o
+> `render.yaml` usa `sync: false`, então ele nunca vai para o repositório).
+
+Para testar localmente com o navegador remoto:
+
+```powershell
+$env:PLATE_BROWSER_WS_ENDPOINT='wss://production-sfo.browserless.io?token=SEU_TOKEN'
+npm run server
+```
+
+Sem essa variável o backend usa o Chromium local (veja abaixo).
+
+#### Alternativa: navegador local (Docker)
+
+Se preferir não usar Browserless, o backend pode abrir o próprio Chromium.
+Nesse caso use o `frontend/Dockerfile` (imagem oficial do Playwright) no Render
+com **Runtime: Docker**, **Dockerfile Path: `frontend/Dockerfile`** e
+**Docker Context: `frontend`** — mais memória é necessária (~300 MB só para o navegador).
+
+### Backend: o navegador headless é obrigatório
+
+A consulta por placa depende do Chromium (Playwright) para passar pelo Cloudflare,
+então o ambiente de deploy precisa de:
+
+1. Dependências do Playwright instaladas (`npx playwright install --with-deps chromium`);
+2. Memória disponível para o navegador (~200–300 MB só para o Chromium).
+
+Para testar a imagem localmente (requer Docker instalado):
 
 ```bash
-# em frontend/.env.production
-VITE_PLATE_API_BASE=https://seu-backend.exemplo.com
+cd frontend
+docker build -t fipefacil-api .
+docker run -p 3001:3001 \
+  -e ALLOWED_ORIGINS=https://mariobignami.github.io \
+  fipefacil-api
 ```
+
+> 💡 O plano gratuito do Render tem 512 MB e hiberna após 15 min sem uso. Na
+> primeira consulta depois de hibernar, a resposta pode levar ~30–60 s (o
+> navegador precisa subir). Se isso incomodar, use um plano com mais memória ou
+> um serviço de navegador remoto (Browserless/CDP) para não rodar Chromium no host.
+
+### Variáveis de ambiente do backend
+
+| Variável | Padrão | Descrição |
+| --- | --- | --- |
+| `PORT` | `3001` | Porta HTTP do backend |
+| `ALLOWED_ORIGINS` | `https://mariobignami.github.io` | Origens CORS liberadas (separadas por vírgula) |
+| `PLATE_BROWSER_WS_ENDPOINT` | *(vazio)* | Endpoint CDP de navegador remoto (ex.: Browserless). **Vazio = Chromium local** |
+| `PLATE_BROWSER_CHANNEL` | *(vazio)* | Canal do navegador local (`chrome`/`msedge`; vazio = Chromium do Playwright) |
+| `PLATE_BROWSER_HEADLESS` | `true` | `false` abre o navegador local visível (útil para depurar o desafio) |
+| `PLATE_BROWSER_IDLE_MS` | `300000` | Tempo ocioso antes de fechar o navegador **local** e liberar memória |
+| `PLATE_FETCH_TIMEOUT_MS` | `25000` | Timeout de cada requisição/navegação |
+| `PLATE_CHALLENGE_TIMEOUT_MS` | `20000` | Tempo máximo de espera pela resolução do desafio do Cloudflare |
+| `PLATE_CACHE_TTL_MS` | `600000` | TTL do cache em memória por placa |
+| `PLATE_BLOCK_ASSETS` | `true` | Bloqueia imagens/fontes/CSS para acelerar a consulta |
+| `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` | — | `1` evita baixar Chromium no build (use no modo remoto) |
+
+Os nomes de provedores declarados em `backend/.env` (`PLATE_API_PROVIDER`,
+`PLATE_API_KEY`, ...) **não são usados** pelo código atual — o backend faz
+scraping com navegador headless.
 
 ## 🔧 Tecnologias
 
@@ -95,5 +182,18 @@ Este projeto é de código aberto e está disponível para uso pessoal e educaci
 ## ⚠️ Limitações e observação legal (consulta por placa)
 
 - A consulta por placa depende do HTML de `https://www.tabelafipebrasil.com/placa`; mudanças de layout/seletor podem impactar o scraping.
+- A fonte está atrás do **Cloudflare com desafio JavaScript**, que responde `403` para requisições HTTP simples (fetch/axios/curl) — não importa o User-Agent ou os headers usados. Por isso o backend abre um **navegador headless (Playwright)** para resolver o desafio, reaproveitando a sessão entre as consultas.
+- Se nem o navegador headless passar, a API responde `503` com o código `SOURCE_BLOCKED` e detalhes das tentativas.
 - O recurso inclui tratamento para indisponibilidade da fonte e mensagens amigáveis quando não for possível interpretar os dados.
 - Verifique sempre os **termos de uso** e políticas do site fonte antes de uso em produção/comercial.
+
+## 🩺 Problemas comuns
+
+| Sintoma | Causa provável | Solução |
+| --- | --- | --- |
+| `SOURCE_BLOCKED` (503) | Cloudflare bloqueou o acesso automático | Verifique se o Chromium está instalado no servidor (`npx playwright install --with-deps chromium`) ou use o modo remoto (`PLATE_BROWSER_WS_ENDPOINT`). |
+| `SOURCE_RATE_LIMITED` (429) | Muitas consultas seguidas à fonte | Espere alguns minutos; o cache de 10 min reduz a frequência |
+| `BROWSER_UNAVAILABLE` (500) | Falha ao iniciar o Chromium **ou** ao conectar no navegador remoto | Confira `PLATE_BROWSER_WS_ENDPOINT`/token, ou rode `npm run browser:install:deps` no modo local |
+| `BACKEND_NOT_CONFIGURED` no navegador | Build do frontend sem `VITE_PLATE_API_BASE` | Configure a variable no GitHub Actions e refaça o deploy |
+| `NETWORK_ERROR` no navegador | Backend fora do ar ou CORS bloqueado | Confira a URL do backend e a variável `ALLOWED_ORIGINS` |
+| Primeira consulta lenta (~3–5 s) | Abertura/reuso do navegador | Normal; as consultas seguintes usam cache (e o modo remoto não reinicia o navegador) |

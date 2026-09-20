@@ -1,0 +1,42 @@
+# Blueprint do Render (https://render.com/docs/blueprint-spec)
+#
+# Cria o backend da consulta por placa. Como o navegador usado para passar pelo
+# Cloudflare é REMOTO (Browserless via CDP), o serviço roda no runtime Node
+# normal: leve, rápido de subir e sem consumir memória com Chromium.
+#
+# Como usar:
+#   1. Render Dashboard > New > Blueprint > selecione o repositório.
+#   2. Quando pedir PLATE_BROWSER_WS_ENDPOINT, cole a URL/token do Browserless.
+#   3. Copie a URL do serviço e cadastre como VITE_PLATE_API_BASE no GitHub.
+#
+# Para rodar com navegador local (Chromium no host), use o Dockerfile em
+# frontend/Dockerfile e deixe PLATE_BROWSER_WS_ENDPOINT vazio.
+
+services:
+  - type: web
+    name: fipefacil-api
+    runtime: node
+    plan: free
+    region: virginia
+    rootDir: frontend
+    buildCommand: PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm install --omit=dev --no-audit --no-fund
+    startCommand: npm run server
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      # Libera o CORS para o frontend publicado no GitHub Pages.
+      - key: ALLOWED_ORIGINS
+        value: https://mariobignami.github.io
+      # Endpoint CDP do Browserless. Ex.:
+      #   wss://production-sfo.browserless.io?token=SEU_TOKEN
+      # sync: false = o valor é pedido no dashboard (não fica no repositório).
+      - key: PLATE_BROWSER_WS_ENDPOINT
+        sync: false
+      # Não baixar Chromium no build (o navegador é remoto).
+      - key: PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD
+        value: "1"
+      # Cache de 10 min por placa (reduz muito o número de consultas à fonte).
+      - key: PLATE_CACHE_TTL_MS
+        value: "600000"
+      - key: PLATE_FETCH_TIMEOUT_MS
+        value: "30000"

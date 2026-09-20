@@ -5,6 +5,8 @@
     "dev": "vite",
     "server": "node server/index.js",
     "start": "node server/index.js",
+    "browser:install": "playwright install chromium",
+    "browser:install:deps": "playwright install --with-deps chromium",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest"
@@ -13,6 +15,7 @@
     "cheerio": "^1.1.2",
     "cors": "^2.8.5",
     "express": "^5.1.0",
+    "playwright": "^1.63.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

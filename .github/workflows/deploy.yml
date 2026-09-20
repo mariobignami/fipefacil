@@ -35,6 +35,10 @@ jobs:
           npm ci
 
       - name: Build
+        env:
+          # Configure em Settings > Secrets and variables > Actions > Variables
+          # Ex.: https://fipefacil-api.onrender.com
+          VITE_PLATE_API_BASE: ${{ vars.VITE_PLATE_API_BASE }}
         run: |
           cd frontend
           npm run build

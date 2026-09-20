@@ -1,5 +1,11 @@
 # 🚀 Guia de Implantação - FipeFácil
 
+> ℹ️ **Atualização:** este guia cobre o deploy do **frontend** (GitHub Pages).
+> A **consulta por placa** usa um backend Node/Express que abre um navegador
+> headless (necessário para passar pelo Cloudflare do `tabelafipebrasil.com`).
+> O GitHub Pages não executa Node, então o backend precisa de um host próprio —
+> veja a seção **Deploy** do `README.md` (passo a passo com `render.yaml`).
+
 ## ✅ O que foi feito
 
 ### 1. **Aplicação Frontend Standalone**

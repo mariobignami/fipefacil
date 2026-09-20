@@ -16,6 +16,51 @@ function cleanText(value) {
   return String(value || '').replace(/\s+/g, ' ').trim();
 }
 
+function buildPlateUrl(value) {
+  const plate = normalizePlateInput(value);
+  return `${SOURCE_URL}/${encodeURIComponent(plate)}`;
+}
+
+/**
+ * O site real também carrega o script do Cloudflare (`/cdn-cgi/challenge-platform/`),
+ * então só consideramos "desafio" quando o conteúdo da FIPE não está presente.
+ */
+function hasFipeContent(html) {
+  return /fipetablepricedetail|fipe-desktop|fipe/i.test(String(html || ''));
+}
+
+/**
+ * Detecta a página de desafio do Cloudflare ("Just a moment..."), que a fonte
+ * usa para bloquear clientes que não executam JavaScript.
+ */
+function isCloudflareChallenge(html, headers) {
+  const mitigated = headers?.get
+    ? headers.get('cf-mitigated')
+    : headers?.['cf-mitigated'];
+
+  if (mitigated === 'challenge') return true;
+
+  const body = String(html || '');
+  if (!body) return false;
+
+  const lower = body.toLowerCase();
+
+  if (lower.includes('just a moment')) return true;
+  if (lower.includes('enable javascript and cookies to continue')) return true;
+  if (lower.includes('cf_chl_opt')) return true;
+  if (lower.includes('challenge-form') || lower.includes('cf-chl-')) return true;
+
+  // Script do Cloudflare presente, mas a página nem chegou na FIPE.
+  if (
+    lower.includes('/cdn-cgi/challenge-platform/') &&
+    !hasFipeContent(body)
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 function normalizeKey(value) {
   return cleanText(value)
     .normalize('NFD')
@@ -147,5 +192,8 @@ module.exports = {
   SOURCE_URL,
   normalizePlateInput,
   isValidPlate,
+  buildPlateUrl,
+  hasFipeContent,
+  isCloudflareChallenge,
   parsePlateHtml,
 };

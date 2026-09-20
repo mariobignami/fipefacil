@@ -8,21 +8,69 @@ const {
   parsePlateHtml,
 } = require('./plateScraper.js');
 
+const {
+  PlateFetchError,
+  fetchPlateHtml,
+  closeBrowser,
+  browserMode,
+} = require('./plateFetcher.js');
+
 const app = express();
 
+// Origens permitidas (separadas por vírgula). Padrão: GitHub Pages do projeto.
+const allowedOrigins = (
+  process.env.ALLOWED_ORIGINS || 'https://mariobignami.github.io'
+)
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 app.use(cors({
-  origin: 'https://mariobignami.github.io',
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(null, false);
+  },
 }));
 
 app.use(express.json());
 
 const PORT = process.env.PORT || 3001;
 
+// Cache curto em memória: evita abrir o navegador headless para a mesma placa
+// em consultas repetidas (a fonte atualiza os valores mensalmente).
+const CACHE_TTL_MS = Number(process.env.PLATE_CACHE_TTL_MS || 10 * 60 * 1000);
+const CACHE_MAX_ENTRIES = Number(process.env.PLATE_CACHE_MAX_ENTRIES || 200);
+const cache = new Map();
+
+function readCache(plate) {
+  const entry = cache.get(plate);
+  if (!entry) return null;
+
+  if (Date.now() - entry.storedAt > CACHE_TTL_MS) {
+    cache.delete(plate);
+    return null;
+  }
+
+  return entry.payload;
+}
+
+function writeCache(plate, payload) {
+  cache.set(plate, { storedAt: Date.now(), payload });
+
+  while (cache.size > CACHE_MAX_ENTRIES) {
+    cache.delete(cache.keys().next().value);
+  }
+}
+
 app.get('/', (_req, res) => {
   res.json({
     status: 'ok',
     service: 'fipefacil-api',
     diagnostic: true,
+    source: SOURCE_URL,
+    browserMode: browserMode(),
   });
 });
 
@@ -39,106 +87,28 @@ app.get('/api/placa', async (req, res) => {
     });
   }
 
-  const targetUrl =
-    `${SOURCE_URL}?placa=${encodeURIComponent(normalizedPlate)}`;
+  const cached = readCache(normalizedPlate);
+  if (cached) {
+    console.log(`[plate-proxy] Placa ${normalizedPlate} respondida via cache.`);
+    return res.json({ ...cached, meta: { ...cached.meta, cached: true } });
+  }
 
   console.log('========================================');
   console.log('[plate-proxy] Nova consulta');
   console.log('[plate-proxy] Placa:', normalizedPlate);
-  console.log('[plate-proxy] URL:', targetUrl);
   console.log('[plate-proxy] Fonte:', SOURCE_URL);
   console.log('========================================');
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
-
   try {
-    const response = await fetch(targetUrl, {
-      method: 'GET',
+    const fetched = await fetchPlateHtml(normalizedPlate);
 
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-
-        'Accept':
-          'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-
-        'Accept-Language':
-          'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
-
-        'Referer': SOURCE_URL,
-
-        'Cache-Control': 'no-cache',
-
-        'Pragma': 'no-cache',
-      },
-
-      signal: controller.signal,
-      redirect: 'follow',
-    });
-
-    console.log('[plate-proxy] HTTP status:', response.status);
-    console.log('[plate-proxy] Status:', response.statusText);
-    console.log(
-      '[plate-proxy] URL final:',
-      response.url
-    );
-
-    // Mostra apenas headers úteis para diagnóstico.
-    console.log('[plate-proxy] Headers relevantes:', {
-      server: response.headers.get('server'),
-      location: response.headers.get('location'),
-      'content-type': response.headers.get('content-type'),
-      'content-length': response.headers.get('content-length'),
-      'cache-control': response.headers.get('cache-control'),
-      'x-powered-by': response.headers.get('x-powered-by'),
-      'cf-ray': response.headers.get('cf-ray'),
-      'cf-cache-status': response.headers.get('cf-cache-status'),
-      'retry-after': response.headers.get('retry-after'),
-    });
-
-    const html = await response.text();
-
-    console.log(
-      '[plate-proxy] Tamanho da resposta:',
-      html.length
-    );
-
-    // Não colocamos a resposta inteira no log.
-    // Apenas os primeiros 1000 caracteres para identificar
-    // se é uma página de bloqueio, erro, Cloudflare etc.
-    if (!response.ok) {
-      console.log(
-        '[plate-proxy] Corpo inicial da resposta:'
-      );
-
-      console.log(
-        html.substring(0, 1000)
-      );
-
-      console.log('========================================');
-      console.log(
-        '[plate-proxy] FONTE RECUSOU A REQUISIÇÃO'
-      );
-      console.log('========================================');
-
-      return res.status(503).json({
-        error: {
-          code: 'SOURCE_UNAVAILABLE',
-          message:
-            'A fonte de dados está indisponível no momento. Tente novamente em instantes.',
-        },
-
-        diagnostic: {
-          sourceStatus: response.status,
-          sourceStatusText: response.statusText,
-          finalUrl: response.url,
-        },
-      });
-    }
+    console.log('[plate-proxy] Estratégia usada:', fetched.via);
+    console.log('[plate-proxy] HTTP status:', fetched.status);
+    console.log('[plate-proxy] Tamanho da resposta:', fetched.html.length);
+    console.log('[plate-proxy] Tentativas:', JSON.stringify(fetched.attempts));
 
     const parsed = parsePlateHtml(
-      html,
+      fetched.html,
       normalizedPlate
     );
 
@@ -172,50 +142,127 @@ app.get('/api/placa', async (req, res) => {
       });
     }
 
+    const payload = {
+      ...parsed.data,
+      meta: {
+        ...parsed.data.meta,
+        fetchStrategy: fetched.via,
+        cached: false,
+      },
+    };
+
+    writeCache(normalizedPlate, payload);
+
     console.log(
       '[plate-proxy] Consulta concluída com sucesso.'
     );
 
-    return res.json(parsed.data);
+    return res.json(payload);
 
   } catch (error) {
+    const isPlateFetchError = error instanceof PlateFetchError;
+
     console.error(
-      '[plate-proxy] ERRO NA REQUISIÇÃO:'
+      '[plate-proxy] ERRO NA CONSULTA:'
     );
 
     console.error({
       name: error?.name,
-      message: error?.message,
-      cause: error?.cause,
       code: error?.code,
+      message: error?.message,
+      meta: error?.meta,
     });
 
-    const isAbortError =
-      error?.name === 'AbortError';
+    if (isPlateFetchError && error.code === 'SOURCE_RATE_LIMITED') {
+      return res.status(429).json({
+        error: {
+          code: 'SOURCE_RATE_LIMITED',
+          message:
+            'A fonte limitou temporariamente as consultas. Aguarde alguns minutos e tente novamente.',
+        },
+        diagnostic: {
+          details: error.meta || null,
+        },
+      });
+    }
+
+    if (isPlateFetchError && error.code === 'SOURCE_BLOCKED') {
+      return res.status(503).json({
+        error: {
+          code: 'SOURCE_BLOCKED',
+          message:
+            'A fonte de dados está bloqueando as consultas automáticas (Cloudflare). Tente novamente em instantes.',
+        },
+
+        diagnostic: {
+          source: SOURCE_URL,
+          details: error.meta || null,
+        },
+      });
+    }
+
+    if (isPlateFetchError && error.code === 'BROWSER_UNAVAILABLE') {
+      return res.status(500).json({
+        error: {
+          code: 'BROWSER_UNAVAILABLE',
+          message:
+            'O servidor não conseguiu iniciar o navegador necessário para consultar a placa.',
+        },
+
+        diagnostic: {
+          details: error.meta || null,
+        },
+      });
+    }
+
+    const isTimeout =
+      error?.name === 'AbortError' ||
+      (isPlateFetchError && error.code === 'SOURCE_TIMEOUT');
 
     return res.status(503).json({
       error: {
-        code: isAbortError
-          ? 'SOURCE_TIMEOUT'
-          : 'SOURCE_UNAVAILABLE',
+        code: isTimeout ? 'SOURCE_TIMEOUT' : 'SOURCE_UNAVAILABLE',
 
-        message: isAbortError
+        message: isTimeout
           ? 'A consulta demorou mais do que o esperado. Tente novamente.'
           : 'Falha ao consultar a fonte de dados. Verifique a conexão e tente novamente.',
       },
-    });
 
-  } finally {
-    clearTimeout(timeout);
+      diagnostic: {
+        details: error?.meta || null,
+      },
+    });
   }
 });
 
-app.listen(
+const server = app.listen(
   PORT,
   '0.0.0.0',
   () => {
     console.log(
       `[plate-proxy] Running on port ${PORT}`
     );
+    console.log(
+      `[plate-proxy] Navegador: ${
+        browserMode() === 'remote'
+          ? 'remoto via CDP (PLATE_BROWSER_WS_ENDPOINT)'
+          : 'local (Chromium do Playwright)'
+      }`
+    );
   }
 );
+
+async function shutdown(signal) {
+  console.log(`[plate-proxy] Recebido ${signal}, encerrando...`);
+  server.close();
+  await closeBrowser().catch(() => {});
+  process.exit(0);
+}
+
+['SIGINT', 'SIGTERM'].forEach((signal) => {
+  process.on(signal, () => {
+    shutdown(signal);
+  });
+});
+
+module.exports = app;

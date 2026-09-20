@@ -2,7 +2,14 @@ import { describe, it, expect } from 'vitest';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
-const { parsePlateHtml, normalizePlateInput, isValidPlate } = require('./plateScraper.js');
+const {
+  parsePlateHtml,
+  normalizePlateInput,
+  isValidPlate,
+  buildPlateUrl,
+  hasFipeContent,
+  isCloudflareChallenge,
+} = require('./plateScraper.js');
 
 describe('plateScraper', () => {
   it('normaliza e valida placa', () => {
@@ -39,5 +46,36 @@ describe('plateScraper', () => {
   it('retorna not_found quando não há dados', () => {
     const parsed = parsePlateHtml('<body>Placa não encontrada.</body>', 'ABC1234');
     expect(parsed.type).toBe('not_found');
+  });
+
+  it('monta a URL de consulta no formato aceito pela fonte', () => {
+    expect(buildPlateUrl('abc-1d23')).toBe(
+      'https://www.tabelafipebrasil.com/placa/ABC1D23'
+    );
+  });
+
+  it('identifica a página de desafio do Cloudflare', () => {
+    const challenge =
+      '<html><head><title>Just a moment...</title></head><body>' +
+      '<script src="/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1"></script>' +
+      '<form id="challenge-form"></form></body></html>';
+
+    expect(isCloudflareChallenge(challenge)).toBe(true);
+    expect(
+      isCloudflareChallenge('<html><body>ok</body></html>', {
+        get: (name) => (name === 'cf-mitigated' ? 'challenge' : null),
+      })
+    ).toBe(true);
+  });
+
+  it('não confunde a página real (que também carrega o script do Cloudflare)', () => {
+    const real =
+      '<html><head><title>Tabela FIPE Brasil - Placa ABC1234</title></head><body>' +
+      '<script src="/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1"></script>' +
+      '<table class="fipeTablePriceDetail"><tr><td>Marca:</td><td>Honda</td></tr></table>' +
+      '</body></html>';
+
+    expect(hasFipeContent(real)).toBe(true);
+    expect(isCloudflareChallenge(real)).toBe(false);
   });
 });

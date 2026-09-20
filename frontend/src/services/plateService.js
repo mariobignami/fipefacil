@@ -1,3 +1,11 @@
+// Host do backend que faz o scraping da placa (definido em build time).
+// Em produção, configure VITE_PLATE_API_BASE (ex.: https://fipefacil-api.onrender.com).
+// Em desenvolvimento o Vite faz proxy de /api para http://localhost:3001.
+const PLATE_API_BASE = (import.meta.env.VITE_PLATE_API_BASE || '').replace(/\/+$/, '');
+const IS_DEV = Boolean(import.meta.env.DEV);
+
+export const PLATE_API_CONFIGURED = Boolean(PLATE_API_BASE) || IS_DEV;
+
 export function normalizePlateInput(value) {
   return String(value || '')
     .toUpperCase()
@@ -32,11 +40,20 @@ export async function searchByPlate(plate) {
     };
   }
 
+  if (!PLATE_API_CONFIGURED) {
+    return {
+      ok: false,
+      code: 'BACKEND_NOT_CONFIGURED',
+      message:
+        'A consulta por placa precisa do backend configurado. Defina VITE_PLATE_API_BASE no build do frontend.',
+    };
+  }
+
   try {
     const response = await fetch(
       `${PLATE_API_BASE}/api/placa?placa=${encodeURIComponent(normalizedPlate)}`
     );
-    const payload = await response.json();
+    const payload = await response.json().catch(() => null);
 
     if (!response.ok) {
       return {
@@ -59,4 +76,3 @@ export async function searchByPlate(plate) {
     };
   }
 }
-const PLATE_API_BASE = import.meta.env.VITE_PLATE_API_BASE || '';
