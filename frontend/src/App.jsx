@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import ManualSearch from './components/ManualSearch.jsx';
 import VehicleResult from './components/VehicleResult.jsx';
 import QuickSearch from './components/QuickSearch.jsx';
@@ -23,6 +23,20 @@ export default function App() {
   const [priceHistory, setPriceHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [resultType, setResultType] = useState(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  // Cronômetro da consulta: a busca por placa abre um navegador remoto, então
+  // mostramos o tempo decorrido para a espera não parecer travada.
+  useEffect(() => {
+    if (status !== STATUS.LOADING) return undefined;
+
+    setElapsedSeconds(0);
+    const interval = setInterval(() => {
+      setElapsedSeconds((seconds) => seconds + 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [status]);
 
   async function runSearch(vehicleData) {
     setStatus(STATUS.LOADING);
@@ -163,8 +177,16 @@ export default function App() {
           <div className="loading-container" aria-live="polite">
             <div className="loading-spinner" />
             <p className="loading-text">
-              {activeTab === 'plate' ? 'Consultando placa e dados FIPE...' : 'Consultando dados do veículo...'}
+              {activeTab === 'plate'
+                ? `Consultando placa e dados FIPE... ${elapsedSeconds}s`
+                : 'Consultando dados do veículo...'}
             </p>
+            {activeTab === 'plate' && elapsedSeconds >= 3 && (
+              <p className="loading-hint">
+                A consulta acessa o site da Tabela FIPE com um navegador remoto — pode levar
+                até uns 15 segundos.
+              </p>
+            )}
           </div>
         )}
 

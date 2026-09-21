@@ -38,9 +38,10 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3001;
 
-// Cache curto em memória: evita abrir o navegador headless para a mesma placa
-// em consultas repetidas (a fonte atualiza os valores mensalmente).
-const CACHE_TTL_MS = Number(process.env.PLATE_CACHE_TTL_MS || 10 * 60 * 1000);
+// Cache em memória: evita abrir o navegador remoto para a mesma placa em
+// consultas repetidas. Os dados de veículo praticamente não mudam e os valores
+// FIPE são atualizados mensalmente, então um TTL longo é seguro.
+const CACHE_TTL_MS = Number(process.env.PLATE_CACHE_TTL_MS || 6 * 60 * 60 * 1000);
 const CACHE_MAX_ENTRIES = Number(process.env.PLATE_CACHE_MAX_ENTRIES || 200);
 const cache = new Map();
 
@@ -99,13 +100,18 @@ app.get('/api/placa', async (req, res) => {
   console.log('[plate-proxy] Fonte:', SOURCE_URL);
   console.log('========================================');
 
+  const startedAt = Date.now();
+
   try {
     const fetched = await fetchPlateHtml(normalizedPlate);
+
+    const durationMs = Date.now() - startedAt;
 
     console.log('[plate-proxy] Estratégia usada:', fetched.via);
     console.log('[plate-proxy] HTTP status:', fetched.status);
     console.log('[plate-proxy] Tamanho da resposta:', fetched.html.length);
     console.log('[plate-proxy] Tentativas:', JSON.stringify(fetched.attempts));
+    console.log(`[plate-proxy] Tempo total: ${durationMs} ms`);
 
     const parsed = parsePlateHtml(
       fetched.html,
@@ -147,6 +153,7 @@ app.get('/api/placa', async (req, res) => {
       meta: {
         ...parsed.data.meta,
         fetchStrategy: fetched.via,
+        durationMs,
         cached: false,
       },
     };

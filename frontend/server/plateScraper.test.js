@@ -48,6 +48,27 @@ describe('plateScraper', () => {
     expect(parsed.type).toBe('not_found');
   });
 
+  it('retorna not_found quando a fonte devolve a página sem dados do veículo', () => {
+    // A fonte responde 200 com a página normal (sem mensagem) para placa inexistente.
+    const html = `
+      <html><head><title>Placa RIO2A18</title></head>
+      <body>
+        <nav><a href="https://www.tabelafipebrasil.com/carros">Carros</a>
+        Marcas Ranking FIPE Pesquisa Placa Perguntas Frequentes
+        O que é a Tabela FIPE? Como usar a Tabela FIPE Pesquisar código FIPE</nav>
+        <footer>Preços Tabela FIPE Brasil Mercado Denatran RENAVAM Documentação</footer>
+      </body></html>
+    `;
+
+    const parsed = parsePlateHtml(html, 'RIO2A18');
+    expect(parsed.type).toBe('not_found');
+  });
+
+  it('retorna selector_changed quando a página não parece ser a da fonte', () => {
+    const parsed = parsePlateHtml('<html><body>oi</body></html>', 'ABC1234');
+    expect(parsed.type).toBe('selector_changed');
+  });
+
   it('monta a URL de consulta no formato aceito pela fonte', () => {
     expect(buildPlateUrl('abc-1d23')).toBe(
       'https://www.tabelafipebrasil.com/placa/ABC1D23'

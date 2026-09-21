@@ -29,15 +29,20 @@ services:
         value: https://mariobignami.github.io
       # Endpoint CDP do Browserless. A fonte bloqueia IPs de datacenter, então
       # é obrigatório usar proxy residencial (rota /stealth + proxy=residential):
-      #   wss://production-sfo.browserless.io/stealth?token=SEU_TOKEN&emulationOs=windows&proxy=residential&proxyCountry=br&proxySticky=true
+      #   wss://production-sfo.browserless.io/stealth?token=SEU_TOKEN&emulationOs=windows&proxy=residential&proxySticky=true
+      # (adicionar &proxyCountry=br se algum dia voltar a ser bloqueado)
       # sync: false = o valor é pedido no dashboard (não fica no repositório).
       - key: PLATE_BROWSER_WS_ENDPOINT
         sync: false
       # Não baixar Chromium no build (o navegador é remoto).
       - key: PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD
         value: "1"
-      # Cache de 10 min por placa (reduz muito o número de consultas à fonte).
+      # Cache de 6h por placa (valores FIPE mudam mensalmente): repetição é instantânea.
       - key: PLATE_CACHE_TTL_MS
-        value: "600000"
+        value: "21600000"
+      # Reaproveita a sessão do Browserless por 1 min após a última consulta:
+      # economiza ~5s por consulta. Use 0 para fechar imediatamente.
+      - key: PLATE_REMOTE_IDLE_MS
+        value: "60000"
       - key: PLATE_FETCH_TIMEOUT_MS
         value: "30000"

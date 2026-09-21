@@ -93,15 +93,28 @@ via CDP). Assim o serviço no Render é um Node comum: leve e sem Chromium.
    datacenter, é obrigatório usar a rota stealth **com proxy residencial** —
    sem o proxy o site responde `403 Attention Required`:
    ```
-   wss://production-sfo.browserless.io/stealth?token=SEU_TOKEN&emulationOs=windows&proxy=residential&proxyCountry=br&proxySticky=true
+   wss://production-sfo.browserless.io/stealth?token=SEU_TOKEN&emulationOs=windows&proxy=residential&proxySticky=true
    ```
    | Parâmetro | Para que serve |
    | --- | --- |
    | `/stealth` | navegador endurecido contra detecção de bot |
    | `emulationOs=windows` | fingerprint coerente de Windows (o padrão do Browserless é Linux) |
    | `proxy=residential` | sai por IP residencial — **essencial** para passar pelo Cloudflare da fonte |
-   | `proxyCountry=br` | IP do Brasil (o site é brasileiro) |
    | `proxySticky=true` | mantém o mesmo IP durante a sessão |
+   | `proxyCountry=br` | *(opcional)* sai por IP do Brasil. Deixamos de fora porque o proxy BR adiciona ~3,5 s por consulta (o navegador roda nos EUA e faz uma volta extra). Se a fonte voltar a bloquear, adicione. |
+
+### Desempenho (o que esperar)
+
+| Situação | Tempo aproximado |
+| --- | --- |
+| Placa já consultada (cache de 6 h) | **< 1 s** |
+| Consulta nova, sessão do navegador reaproveitada | **~5–8 s** |
+| Consulta nova, abrindo sessão remota nova | **~11–15 s** |
+| Primeira consulta após o serviço hibernar (plano free do Render) | +30–60 s |
+
+Otimizações aplicadas: sessão remota reaproveitada por `PLATE_REMOTE_IDLE_MS`
+(1 min), cache de 6 h, bloqueio de imagens/CSS/fontes e uma única sessão
+simultânea (fila).
 3. Suba o código para o GitHub (o `render.yaml` já está na raiz).
 4. Em [dashboard.render.com](https://dashboard.render.com) → **New** → **Blueprint** → selecione o repositório.
    Quando o Render pedir `PLATE_BROWSER_WS_ENDPOINT`, cole a URL do passo 2.
@@ -168,9 +181,10 @@ docker run -p 3001:3001 \
 | `PLATE_BROWSER_CHANNEL` | *(vazio)* | Canal do navegador local (`chrome`/`msedge`; vazio = Chromium do Playwright) |
 | `PLATE_BROWSER_HEADLESS` | `true` | `false` abre o navegador local visível (útil para depurar o desafio) |
 | `PLATE_BROWSER_IDLE_MS` | `300000` | Tempo ocioso antes de fechar o navegador **local** e liberar memória |
+| `PLATE_REMOTE_IDLE_MS` | `60000` | Tempo que a sessão remota fica aberta após a última consulta (`0` = fechar na hora) |
 | `PLATE_FETCH_TIMEOUT_MS` | `25000` | Timeout de cada requisição/navegação |
 | `PLATE_CHALLENGE_TIMEOUT_MS` | `20000` | Tempo máximo de espera pela resolução do desafio do Cloudflare |
-| `PLATE_CACHE_TTL_MS` | `600000` | TTL do cache em memória por placa |
+| `PLATE_CACHE_TTL_MS` | `21600000` (6 h) | TTL do cache em memória por placa |
 | `PLATE_BLOCK_ASSETS` | `true` | Bloqueia imagens/fontes/CSS para acelerar a consulta |
 | `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` | — | `1` evita baixar Chromium no build (use no modo remoto) |
 

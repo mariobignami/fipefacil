@@ -50,6 +50,13 @@ const config = {
   requestTimeoutMs: Number(process.env.PLATE_FETCH_TIMEOUT_MS || 25000),
   challengeTimeoutMs: Number(process.env.PLATE_CHALLENGE_TIMEOUT_MS || 20000),
   idleShutdownMs: Number(process.env.PLATE_BROWSER_IDLE_MS || 5 * 60 * 1000),
+  // Quanto tempo manter a sessão remota aberta depois da última consulta.
+  // Reaproveitar a conexão economiza ~5s por consulta; manter aberta consome
+  // unidades do serviço. 0 = fechar imediatamente após cada consulta.
+  remoteIdleMs:
+    process.env.PLATE_REMOTE_IDLE_MS === undefined
+      ? 60 * 1000
+      : Number(process.env.PLATE_REMOTE_IDLE_MS),
   browserChannel: process.env.PLATE_BROWSER_CHANNEL || '',
   headless: process.env.PLATE_BROWSER_HEADLESS !== 'false',
   blockAssets: process.env.PLATE_BLOCK_ASSETS !== 'false',
@@ -92,6 +99,11 @@ let contextInstance = null;
 let idleTimer = null;
 let activeLaunches = 0;
 let warnedAboutBrowser = false;
+
+// Sessão remota (CDP) reaproveitada entre consultas próximas.
+let remoteBrowser = null;
+let remoteContext = null;
+let remoteIdleTimer = null;
 
 // Quando a fonte responde com desafio para requisições HTTP simples, evitamos
 // gastar uma requisição por consulta: só tentamos de novo depois deste intervalo.
@@ -299,18 +311,31 @@ async function fetchWithLocalBrowser(url) {
 }
 
 /**
- * Navegador remoto via CDP (ex.: Browserless). Cada consulta abre e encerra a
- * própria sessão remota — assim o backend não gasta memória com Chromium.
+ * Navegador remoto via CDP (ex.: Browserless).
+ *
+ * Abrir uma sessão remota custa ~5-7s, então a conexão é reaproveitada entre
+ * consultas próximas e encerrada depois de um tempo ocioso (o que libera a
+ * sessão e para de consumir unidades do serviço).
  */
-async function fetchWithRemoteBrowser(url) {
+async function connectRemoteBrowser() {
   const playwright = loadPlaywright();
 
-  let browser;
   try {
-    browser = await playwright.chromium.connectOverCDP(config.wsEndpoint, {
+    const browser = await playwright.chromium.connectOverCDP(config.wsEndpoint, {
       timeout: config.requestTimeoutMs,
     });
+
+    browser.on('disconnected', () => {
+      remoteBrowser = null;
+      remoteContext = null;
+    });
+
+    console.log('[plate-fetcher] Sessão remota aberta.');
+    return browser;
   } catch (error) {
+    remoteBrowser = null;
+    remoteContext = null;
+
     throw new PlateFetchError(
       'BROWSER_UNAVAILABLE',
       'Não foi possível conectar ao navegador remoto (CDP).',
@@ -321,17 +346,67 @@ async function fetchWithRemoteBrowser(url) {
       }
     );
   }
+}
+
+async function ensureRemoteBrowser() {
+  if (remoteBrowser && remoteBrowser.isConnected()) return remoteBrowser;
+
+  remoteBrowser = null;
+  remoteContext = null;
+  remoteBrowser = await connectRemoteBrowser();
+  return remoteBrowser;
+}
+
+function scheduleRemoteIdleClose() {
+  if (remoteIdleTimer) clearTimeout(remoteIdleTimer);
+
+  // 0 = não reaproveita: fecha a sessão assim que a consulta termina.
+  if (config.remoteIdleMs <= 0) {
+    closeRemoteBrowser().catch(() => {});
+    return;
+  }
+
+  remoteIdleTimer = setTimeout(() => {
+    closeRemoteBrowser().catch(() => {});
+  }, config.remoteIdleMs);
+
+  if (typeof remoteIdleTimer.unref === 'function') remoteIdleTimer.unref();
+}
+
+async function closeRemoteBrowser() {
+  if (remoteIdleTimer) {
+    clearTimeout(remoteIdleTimer);
+    remoteIdleTimer = null;
+  }
+
+  const browser = remoteBrowser;
+  remoteBrowser = null;
+  remoteContext = null;
+
+  if (!browser) return;
 
   try {
-    const context = await browser
-      .newContext(await buildContextOptions())
-      .then(prepareContext)
-      .catch(() => browser.contexts()[0]);
+    await browser.close();
+    console.log('[plate-fetcher] Sessão remota encerrada (liberando consumo).');
+  } catch (error) {
+    console.error('[plate-fetcher] Falha ao encerrar sessão remota:', error.message);
+  }
+}
 
-    return await loadPlateHtml(context, url);
+async function fetchWithRemoteBrowser(url) {
+  const browser = await ensureRemoteBrowser();
+
+  try {
+    if (!remoteContext || remoteContext.isClosed?.()) {
+      remoteContext = await browser
+        .newContext(await buildContextOptions())
+        .then(prepareContext)
+        .catch(() => browser.contexts()[0]);
+    }
+
+    return await loadPlateHtml(remoteContext, url);
   } finally {
-    // Encerra a sessão remota e libera a unidade no serviço de navegador.
-    await browser.close().catch(() => {});
+    scheduleRemoteIdleClose();
   }
 }
 
@@ -353,6 +428,8 @@ async function closeBrowser() {
   browserInstance = null;
   contextInstance = null;
   browserPromise = null;
+
+  await closeRemoteBrowser();
 
   if (!browser) return;
 

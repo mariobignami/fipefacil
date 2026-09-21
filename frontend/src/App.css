@@ -234,6 +234,16 @@ body {
   font-weight: 500;
 }
 
+.loading-hint {
+  max-width: 22rem;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
+  text-align: center;
+  opacity: 0.85;
+}
+
 /* Error Banner */
 .error-banner {
   background: var(--color-error-bg);

@@ -155,7 +155,12 @@ function parsePlateHtml(html, queriedPlate) {
     bodyText.includes('nenhum registro encontrado') ||
     bodyText.includes('nao foi possivel localizar');
 
-  if (!hasData && notFoundText) {
+  // Quando a placa não existe, a fonte devolve a página normal (200) sem os
+  // dados do veículo e sem mensagem explícita. Se a resposta é de fato uma
+  // página da fonte, o certo é "placa não encontrada", não erro de parser.
+  const isSourcePage = /tabelafipebrasil\.com/i.test(html);
+
+  if (!hasData && (notFoundText || isSourcePage)) {
     return {
       type: 'not_found',
       message: 'Placa não encontrada na fonte de dados.',
