@@ -4,7 +4,7 @@ import VehicleResult from './components/VehicleResult.jsx';
 import QuickSearch from './components/QuickSearch.jsx';
 import PlateSearch from './components/PlateSearch.jsx';
 import PlateResult from './components/PlateResult.jsx';
-import { searchFipeByCodes, fetchPriceHistory, fetchPriceHistoryByFipeCode, vehicleTypeFromCategory } from './services/fipeService.js';
+import { searchFipeByCodes, fetchPriceHistory } from './services/fipeService.js';
 import { searchByPlate, warmupPlateBackend } from './services/plateService.js';
 
 const STATUS = {
@@ -116,22 +116,6 @@ export default function App() {
     setResult(response.data);
     setResultType('plate');
     setStatus(STATUS.SUCCESS);
-
-    // Histórico de preços em segundo plano, usando o código FIPE que a própria
-    // consulta por placa devolveu (API da FIPE, 1 requisição por mês).
-    const codigoFipe = response.data?.fipePrimary?.code;
-    if (codigoFipe) {
-      setHistoryLoading(true);
-      fetchPriceHistoryByFipeCode(codigoFipe, {
-        vehicleType: vehicleTypeFromCategory(response.data?.vehicle?.category),
-        modelYear: response.data?.vehicle?.year,
-      })
-        .then((history) => {
-          setPriceHistory(history);
-          setHistoryLoading(false);
-        })
-        .catch(() => setHistoryLoading(false));
-    }
   }
 
   function resetSearch() {
@@ -247,7 +231,7 @@ export default function App() {
 
         {status === STATUS.SUCCESS && result && resultType === 'plate' && (
           <>
-            <PlateResult data={result} priceHistory={priceHistory} historyLoading={historyLoading} />
+            <PlateResult data={result} />
             <div className="try-another">
               <button className="try-another-button" onClick={resetSearch}>
                 Nova Consulta

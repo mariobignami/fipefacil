@@ -44,10 +44,22 @@ export function vehicleTypeFromCategory(category) {
  * por placa fornece). Usa os endpoints "Busca por código FIPE" da API v2:
  *   GET /{tipo}/{codigoFipe}/years            -> anos/combustíveis disponíveis
  *   GET /{tipo}/{codigoFipe}/years/{ano}/history -> histórico em 1 requisição
+ *
+ * O resultado fica em cache: trocar de modelo na tela e voltar é instantâneo e
+ * a API da FIPE (limite diário de requisições) não é sobrecarregada.
  */
+const historicoPorCodigo = new Map();
+
+export function clearPriceHistoryCache() {
+  historicoPorCodigo.clear();
+}
+
 export async function fetchPriceHistoryByFipeCode(fipeCode, { vehicleType = 'cars', modelYear } = {}) {
   const v2Type = VEHICLE_TYPE_MAP[vehicleType] || 'cars';
   if (!fipeCode) return [];
+
+  const chave = `${v2Type}:${fipeCode}:${modelYear || ''}`;
+  if (historicoPorCodigo.has(chave)) return historicoPorCodigo.get(chave);
 
   try {
     const anosRes = await fetch(`${FIPE_BASE_URL}/${v2Type}/${encodeURIComponent(fipeCode)}/years`);
@@ -68,7 +80,7 @@ export async function fetchPriceHistoryByFipeCode(fipeCode, { vehicleType = 'car
     const dados = await histRes.json();
     const historico = Array.isArray(dados?.priceHistory) ? dados.priceHistory : [];
 
-    return historico
+    const resultado = historico
       .map((item) => ({
         month: item.month || '',
         price: parseFipePrice(item.price),
@@ -77,6 +89,9 @@ export async function fetchPriceHistoryByFipeCode(fipeCode, { vehicleType = 'car
       }))
       .filter((item) => item.price > 0)
       .reverse(); // a API devolve do mais recente para o mais antigo
+
+    historicoPorCodigo.set(chave, resultado);
+    return resultado;
   } catch (error) {
     console.error('[fipeService] Error getting plate price history:', error);
     return [];

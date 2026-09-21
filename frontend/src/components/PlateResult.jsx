@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import PlateVisual from './PlateVisual.jsx';
 import PriceHistoryChart from './PriceHistoryChart.jsx';
+import { fetchPriceHistoryByFipeCode, vehicleTypeFromCategory } from '../services/fipeService.js';
 
 function InfoRow({ label, value }) {
   if (!value && value !== 0) return null;
@@ -33,7 +34,7 @@ function nomeFonte(url) {
   }
 }
 
-export default function PlateResult({ data, priceHistory, historyLoading }) {
+export default function PlateResult({ data }) {
   const { vehicle, fipePrimary, sameYearModels, meta } = data || {};
 
   const candidates = [fipePrimary, ...(sameYearModels || [])].filter(Boolean);
@@ -45,6 +46,40 @@ export default function PlateResult({ data, priceHistory, historyLoading }) {
     ? pickedCode
     : fipePrimary?.code;
   const selected = candidates.find((item) => item.code === selectedCode) || fipePrimary;
+
+  // Histórico do modelo que está selecionado (muda quando o usuário troca).
+  const vehicleType = vehicleTypeFromCategory(vehicle?.category);
+  const codigoSelecionado = selected?.code || '';
+  const anoModelo = vehicle?.year || '';
+  const [historico, setHistorico] = useState([]);
+  const [historicoCarregando, setHistoricoCarregando] = useState(false);
+
+  useEffect(() => {
+    if (!codigoSelecionado) {
+      setHistorico([]);
+      setHistoricoCarregando(false);
+      return undefined;
+    }
+
+    let cancelado = false;
+    setHistoricoCarregando(true);
+
+    fetchPriceHistoryByFipeCode(codigoSelecionado, { vehicleType, modelYear: anoModelo })
+      .then((dados) => {
+        if (cancelado) return;
+        setHistorico(dados);
+      })
+      .catch(() => {
+        if (!cancelado) setHistorico([]);
+      })
+      .finally(() => {
+        if (!cancelado) setHistoricoCarregando(false);
+      });
+
+    return () => {
+      cancelado = true;
+    };
+  }, [codigoSelecionado, vehicleType, anoModelo]);
 
   if (!data) return null;
 
@@ -106,29 +141,6 @@ export default function PlateResult({ data, priceHistory, historyLoading }) {
         </p>
       </div>
 
-      {selected && (
-        <div className="result-card result-card--fipe">
-          <h2 className="result-card-title">
-            {isRecommended
-              ? 'Modelo mais provável'
-              : selected === fipePrimary
-                ? 'Modelo sugerido pela fonte'
-                : 'Modelo selecionado'}
-          </h2>
-          <div className="fipe-price">{selected.value || 'Valor indisponível'}</div>
-          <div className="info-grid">
-            <InfoRow label="Código FIPE" value={selected.code} />
-            <InfoRow label="Modelo" value={selected.model} />
-          </div>
-        </div>
-      )}
-
-      {(historyLoading || priceHistory?.length >= 2) && (
-        <div className="result-card result-card--history">
-          <PriceHistoryChart data={priceHistory} loading={historyLoading} />
-        </div>
-      )}
-
       <div className="result-card">
         <h2 className="result-card-title">
           Modelos do mesmo ano{candidates.length > 1 ? ` (${candidates.length})` : ''}
@@ -166,6 +178,29 @@ export default function PlateResult({ data, priceHistory, historyLoading }) {
           })}
         </ul>
       </div>
+
+      {selected && (
+        <div className="result-card result-card--fipe">
+          <h2 className="result-card-title">
+            {isRecommended
+              ? 'Modelo mais provável'
+              : selected === fipePrimary
+                ? 'Modelo sugerido pela fonte'
+                : 'Modelo selecionado'}
+          </h2>
+          <div className="fipe-price">{selected.value || 'Valor indisponível'}</div>
+          <div className="info-grid">
+            <InfoRow label="Código FIPE" value={selected.code} />
+            <InfoRow label="Modelo" value={selected.model} />
+          </div>
+        </div>
+      )}
+
+      {(historicoCarregando || historico.length >= 2) && (
+        <div className="result-card result-card--history">
+          <PriceHistoryChart data={historico} loading={historicoCarregando} />
+        </div>
+      )}
 
       {meta?.warnings?.length > 0 && (
         <div className="result-card result-card--warnings">

@@ -1,7 +1,21 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import PlateResult from './PlateResult.jsx';
+import { fetchPriceHistoryByFipeCode } from '../services/fipeService.js';
+
+vi.mock('../services/fipeService.js', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    fetchPriceHistoryByFipeCode: vi.fn(() => Promise.resolve([])),
+  };
+});
+
+beforeEach(() => {
+  fetchPriceHistoryByFipeCode.mockReset();
+  fetchPriceHistoryByFipeCode.mockResolvedValue([]);
+});
 
 const baseData = {
   vehicle: {
@@ -100,19 +114,44 @@ describe('PlateResult', () => {
     expect(document.querySelector('.plate-visual-local')).toHaveTextContent('MA-SAO LUIS');
   });
 
-  it('mostra o histórico de preços quando há dados', () => {
-    render(
-      <PlateResult
-        data={baseData}
-        priceHistory={[
-          { month: 'agosto de 2026', price: 43000, priceFormatted: 'R$ 43.000,00' },
-          { month: 'setembro de 2026', price: 43585, priceFormatted: 'R$ 43.585,00' },
-        ]}
-        historyLoading={false}
-      />
+  it('mostra o histórico do modelo selecionado e recarrega ao trocar', async () => {
+    fetchPriceHistoryByFipeCode.mockResolvedValue([
+      { month: 'agosto de 2026', price: 43000, priceFormatted: 'R$ 43.000,00' },
+      { month: 'setembro de 2026', price: 43585, priceFormatted: 'R$ 43.585,00' },
+    ]);
+
+    const user = userEvent.setup();
+    render(<PlateResult data={baseData} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Histórico de Preços por Mês de Referência')).toBeInTheDocument();
+    });
+    expect(fetchPriceHistoryByFipeCode).toHaveBeenCalledWith(
+      '014039-2',
+      expect.objectContaining({ modelYear: '2012' })
     );
 
-    expect(screen.getByText('Histórico de Preços por Mês de Referência')).toBeInTheDocument();
+    // troca o modelo selecionado -> busca o histórico do novo código
+    await user.click(screen.getAllByRole('button', { name: 'Usar este' })[0]);
+    await waitFor(() => {
+      expect(fetchPriceHistoryByFipeCode).toHaveBeenLastCalledWith(
+        '014040-6',
+        expect.objectContaining({ modelYear: '2012' })
+      );
+    });
+  });
+
+  it('mostra a lista de modelos acima do preço', () => {
+    render(<PlateResult data={baseData} />);
+
+    const titulos = Array.from(document.querySelectorAll('.result-card-title')).map((el) =>
+      el.textContent.trim()
+    );
+    const indiceLista = titulos.findIndex((t) => /Modelos do mesmo ano/.test(t));
+    const indicePreco = titulos.findIndex((t) => /Modelo mais provável/.test(t));
+
+    expect(indiceLista).toBeGreaterThanOrEqual(0);
+    expect(indicePreco).toBeGreaterThan(indiceLista);
   });
 
   it('lista todos os modelos do ano e marca o selecionado', () => {
