@@ -5,7 +5,7 @@ import QuickSearch from './components/QuickSearch.jsx';
 import PlateSearch from './components/PlateSearch.jsx';
 import PlateResult from './components/PlateResult.jsx';
 import { searchFipeByCodes, fetchPriceHistory } from './services/fipeService.js';
-import { searchByPlate } from './services/plateService.js';
+import { searchByPlate, warmupPlateBackend } from './services/plateService.js';
 
 const STATUS = {
   IDLE: 'idle',
@@ -107,7 +107,6 @@ export default function App() {
     setVehicleContext(null);
 
     const response = await searchByPlate(plateInput);
-
     if (!response.ok) {
       setStatus(STATUS.ERROR);
       setErrorMessage(response.message);
@@ -158,7 +157,11 @@ export default function App() {
               role="tab"
               aria-selected={activeTab === 'plate'}
               className={`search-tab ${activeTab === 'plate' ? 'search-tab--active' : ''}`}
-              onClick={() => setActiveTab('plate')}
+              onClick={() => {
+                setActiveTab('plate');
+                // Já vai abrindo o navegador remoto: a consulta fica ~1s
+                warmupPlateBackend();
+              }}
             >
               Consulta por Placa
             </button>

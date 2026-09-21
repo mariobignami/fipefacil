@@ -42,19 +42,17 @@ export default function PlateSearch({ onSubmit, loading }) {
   function updateChar(index, value) {
     const rule = POSITION_RULES[plateFormat][index];
     const clean = sanitizeByRule(value, rule);
-    setChars((prev) => {
-      const next = [...prev];
-      next[index] = clean;
+    const next = [...chars];
+    next[index] = clean;
+    setChars(next);
 
-      // Assim que dá para ver que é uma placa de verdade, já pede ao backend
-      // para abrir o navegador remoto (esconde ~5s da espera na consulta).
-      if (!warmedUp.current && normalizePlateInput(next.join('')).length >= 3) {
-        warmedUp.current = true;
-        warmupPlateBackend();
-      }
+    // Assim que dá para ver que é uma placa de verdade, já pede ao backend
+    // para abrir o navegador remoto (esconde a espera da consulta).
+    if (!warmedUp.current && normalizePlateInput(next.join('')).length >= 3) {
+      warmedUp.current = true;
+      warmupPlateBackend();
+    }
 
-      return next;
-    });
     if (clean && index < 6) {
       const nextInput = document.getElementById(`plate-char-${index + 1}`);
       nextInput?.focus();
