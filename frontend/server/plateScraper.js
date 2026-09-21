@@ -141,6 +141,62 @@ function buildVehicleData(details, queriedPlate) {
   };
 }
 
+function tokenizeModel(value) {
+  return Array.from(
+    new Set(
+      normalizeKey(value)
+        .replace(/[^a-z0-9]+/g, ' ')
+        .split(' ')
+        .filter((token) => /[a-z]/.test(token))
+    )
+  );
+}
+
+/**
+ * Compara o modelo do veículo (ex.: "T CROSS HL TSI") com cada candidato da
+ * lista da fonte e devolve quantos termos bateram.
+ */
+function scoreModelMatch(vehicleModel, candidateModel) {
+  const vehicleTokens = tokenizeModel(vehicleModel);
+  if (!vehicleTokens.length) return { score: 0, matchedTokens: [] };
+
+  const candidateTokens = new Set(tokenizeModel(candidateModel));
+  const matchedTokens = vehicleTokens.filter((token) => candidateTokens.has(token));
+
+  return {
+    score: matchedTokens.length / vehicleTokens.length,
+    matchedTokens,
+  };
+}
+
+/**
+ * A fonte devolve uma LISTA de modelos do mesmo ano que "podem corresponder" à
+ * placa (sem marcar qual é o correto). Ordenamos por semelhança com o modelo do
+ * veículo e mantemos o primeiro como sugestão principal.
+ */
+function rankFipeRows(vehicleModel, rows) {
+  if (!rows.length) return { primary: null, others: [] };
+
+  const scored = rows.map((row) => ({
+    row,
+    ...scoreModelMatch(vehicleModel, row.model),
+  }));
+
+  const best = scored.reduce(
+    (acc, item) => (item.score > acc.score ? item : acc),
+    scored[0]
+  );
+
+  return {
+    primary: {
+      ...best.row,
+      matchScore: Number(best.score.toFixed(2)),
+      matchedTokens: best.matchedTokens,
+    },
+    others: scored.filter((item) => item !== best).map((item) => item.row),
+  };
+}
+
 function parsePlateHtml(html, queriedPlate) {
   const warnings = [];
   const $ = cheerio.load(html);
@@ -175,19 +231,22 @@ function parsePlateHtml(html, queriedPlate) {
     };
   }
 
-  const [fipePrimary, ...sameYearModels] = fipeRows;
-  const filteredWarnings = warnings.filter(Boolean);
+  const vehicle = buildVehicleData(details, queriedPlate);
+  const ranked = rankFipeRows(vehicle.model, fipeRows);
 
   return {
     type: 'success',
     data: {
-      vehicle: buildVehicleData(details, queriedPlate),
-      fipePrimary: fipePrimary || null,
-      sameYearModels,
+      vehicle,
+      // A fonte lista vários candidatos; marcamos o mais parecido com o modelo
+      // da placa, mas sem afirmar que é o valor exato do veículo.
+      fipePrimary: ranked.primary,
+      sameYearModels: ranked.others,
+      candidatesCount: fipeRows.length,
       meta: {
         source: SOURCE_URL,
         queriedAt: new Date().toISOString(),
-        warnings: filteredWarnings,
+        warnings: warnings.filter(Boolean),
       },
     },
   };
@@ -200,5 +259,7 @@ module.exports = {
   buildPlateUrl,
   hasFipeContent,
   isCloudflareChallenge,
+  scoreModelMatch,
+  rankFipeRows,
   parsePlateHtml,
 };

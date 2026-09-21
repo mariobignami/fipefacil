@@ -13,7 +13,8 @@ function InfoRow({ label, value }) {
 export default function PlateResult({ data }) {
   if (!data) return null;
 
-  const { vehicle, fipePrimary, sameYearModels, meta } = data;
+  const { vehicle, fipePrimary, sameYearModels, candidatesCount, meta } = data;
+  const hasMatch = (fipePrimary?.matchScore ?? 0) > 0;
 
   return (
     <div className="result-container">
@@ -32,17 +33,27 @@ export default function PlateResult({ data }) {
 
       {fipePrimary && (
         <div className="result-card result-card--fipe">
-          <h2 className="result-card-title">FIPE principal</h2>
+          <h2 className="result-card-title">
+            {hasMatch ? 'Modelo mais provável' : 'Modelo sugerido pela fonte'}
+          </h2>
           <div className="fipe-price">{fipePrimary.value || 'Valor indisponível'}</div>
           <div className="info-grid">
             <InfoRow label="Código FIPE" value={fipePrimary.code} />
             <InfoRow label="Modelo" value={fipePrimary.model} />
           </div>
+          {hasMatch && fipePrimary.matchedTokens?.length > 0 && (
+            <p className="match-hint">
+              Escolhido por corresponder a <strong>{fipePrimary.matchedTokens.join(', ')}</strong> do
+              modelo da placa.
+            </p>
+          )}
         </div>
       )}
 
       <div className="result-card">
-        <h2 className="result-card-title">Outros modelos do mesmo ano</h2>
+        <h2 className="result-card-title">
+          Outros modelos do mesmo ano{candidatesCount > 1 ? ` (${candidatesCount - 1})` : ''}
+        </h2>
         {sameYearModels?.length ? (
           <div className="same-year-table-wrapper">
             <table className="same-year-table">
@@ -67,6 +78,10 @@ export default function PlateResult({ data }) {
         ) : (
           <p className="empty-inline-message">Nenhum outro modelo do mesmo ano foi retornado.</p>
         )}
+        <p className="source-note">
+          A fonte lista todos os modelos do ano dessa marca que <em>podem</em> corresponder à placa
+          e não indica qual é o correto. Confirme o modelo exato do veículo antes de usar o valor.
+        </p>
       </div>
 
       {meta?.warnings?.length > 0 && (

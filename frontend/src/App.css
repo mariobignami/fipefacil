@@ -244,6 +244,21 @@ body {
   opacity: 0.85;
 }
 
+/* Resultado da consulta por placa */
+.match-hint,
+.source-note {
+  margin: 0.85rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.source-note {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border, #e5e7eb);
+}
+
 /* Error Banner */
 .error-banner {
   background: var(--color-error-bg);

@@ -207,6 +207,7 @@ Este projeto é de código aberto e está disponível para uso pessoal e educaci
 ## ⚠️ Limitações e observação legal (consulta por placa)
 
 - A consulta por placa depende do HTML de `https://www.tabelafipebrasil.com/placa`; mudanças de layout/seletor podem impactar o scraping.
+- **A fonte não informa o modelo exato do veículo.** Ela devolve uma *lista* de modelos do mesmo ano daquela marca que "podem corresponder" à placa (ex.: para um VW T-Cross ela lista também um Saveiro CROSS, que casou pela palavra "CROSS"). O app **ranqueia os candidatos pela semelhança com o modelo da placa** e mostra o primeiro como "Modelo mais provável", mantendo os outros na tabela. Confirme sempre o modelo exato antes de usar o valor.
 - A fonte está atrás do **Cloudflare com desafio JavaScript**, que responde `403` para requisições HTTP simples (fetch/axios/curl) — não importa o User-Agent ou os headers usados. Por isso o backend abre um **navegador headless (Playwright)** para resolver o desafio, reaproveitando a sessão entre as consultas.
 - Se nem o navegador headless passar, a API responde `503` com o código `SOURCE_BLOCKED` e detalhes das tentativas.
 - O recurso inclui tratamento para indisponibilidade da fonte e mensagens amigáveis quando não for possível interpretar os dados.
