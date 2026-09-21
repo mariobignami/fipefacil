@@ -259,6 +259,53 @@ body {
   border-top: 1px solid var(--color-border, #e5e7eb);
 }
 
+.result-card--notice {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+}
+
+.ambiguity-note {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: #92400e;
+}
+
+.same-year-table tr.is-selected {
+  background: var(--color-primary-light, #eef2ff);
+  font-weight: 600;
+}
+
+.same-year-table-action {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.model-select-btn {
+  padding: 0.25rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: transparent;
+  border: 1px solid var(--color-primary);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.model-select-btn:hover {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.model-selected-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
 /* Error Banner */
 .error-banner {
   background: var(--color-error-bg);

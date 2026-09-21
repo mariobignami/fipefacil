@@ -169,6 +169,69 @@ function scoreModelMatch(vehicleModel, candidateModel) {
   };
 }
 
+// Termos que costumam diferenciar versões do mesmo modelo e que NÃO constam nos
+// dados da placa (câmbio, número de portas). Ex.: "Fit LX ... Mec." x "... Aut.".
+const VARIANT_TOKENS = new Set([
+  'mec',
+  'mecanico',
+  'mecanica',
+  'manual',
+  'aut',
+  'automatico',
+  'automatica',
+  'cvt',
+  'mt',
+  'at',
+  '2p',
+  '3p',
+  '4p',
+  '5p',
+  '2d',
+  '4d',
+]);
+
+function tokenSet(value) {
+  return new Set(tokenizeModel(value));
+}
+
+function symmetricDifference(first, second) {
+  const diff = new Set();
+
+  first.forEach((token) => {
+    if (!second.has(token)) diff.add(token);
+  });
+  second.forEach((token) => {
+    if (!first.has(token)) diff.add(token);
+  });
+
+  return Array.from(diff);
+}
+
+/**
+ * Quando vários candidatos empatam, verifica se eles são o MESMO modelo com
+ * nomes praticamente iguais (diferença só em câmbio/portas). Nesse caso a fonte
+ * não permite saber qual é o do veículo e o usuário precisa escolher.
+ * Devolve quantos candidatos estão nessa situação (1 = sem ambiguidade).
+ */
+function countAmbiguousVariants(vehicleModel, rows) {
+  const scored = rows.map((row) => ({ row, ...scoreModelMatch(vehicleModel, row.model) }));
+  if (!scored.length) return 1;
+
+  const topScore = Math.max(...scored.map((item) => item.score));
+  const tied = scored.filter((item) => item.score === topScore);
+  if (tied.length < 2) return 1;
+
+  // Conta quantos dos empatados são a mesma versão, diferenciada apenas por
+  // tokens de câmbio/portas (o resto do nome é idêntico).
+  const baseTokens = tokenSet(tied[0].row.model);
+  const variants = tied.filter((item) => {
+    const diff = symmetricDifference(baseTokens, tokenSet(item.row.model));
+    return diff.every((token) => VARIANT_TOKENS.has(token));
+  });
+
+  return variants.length;
+}
+
 /**
  * A fonte devolve uma LISTA de modelos do mesmo ano que "podem corresponder" à
  * placa (sem marcar qual é o correto). Ordenamos por semelhança com o modelo do
@@ -192,6 +255,7 @@ function rankFipeRows(vehicleModel, rows) {
       ...best.row,
       matchScore: Number(best.score.toFixed(2)),
       matchedTokens: best.matchedTokens,
+      ambiguousCount: countAmbiguousVariants(vehicleModel, rows),
     },
     others: scored.filter((item) => item !== best).map((item) => item.row),
   };

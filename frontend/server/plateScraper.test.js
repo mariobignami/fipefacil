@@ -90,6 +90,61 @@ describe('plateScraper', () => {
     expect(others.map((row) => row.code)).toContain('005408-9');
   });
 
+  it('sinaliza empate quando dois candidatos têm o mesmo nome (Fit LX Mec. x Aut.)', () => {
+    // Caso real HHE7F34: a placa não informa o câmbio, então "Mec." e "Aut."
+    // empatam e a fonte não diz qual é o correto.
+    const rows = [
+      { code: '014039-2', model: 'Fit LX 1.4/ 1.4 Flex 8V/16V 5p Mec.', value: 'R$ 43.585,00' },
+      { code: '014040-6', model: 'Fit LX 1.4/ 1.4 Flex 8V/16V 5p Aut.', value: 'R$ 48.397,00' },
+      { code: '014041-4', model: 'Fit LXL 1.4/ 1.4 Flex 8V/16V 5p Mec.', value: 'R$ 45.638,00' },
+      { code: '014042-2', model: 'Fit LXL 1.4/ 1.4 Flex 8V/16V 5p Aut.', value: 'R$ 49.763,00' },
+    ];
+
+    const { primary, others } = rankFipeRows('FIT LX FLEX', rows);
+
+    expect(primary.ambiguousCount).toBe(2);
+    expect(primary.matchScore).toBe(1);
+    // Empate resolvido pela ordem da fonte (não há informação para decidir).
+    expect(primary.code).toBe('014039-2');
+    expect(others.map((row) => row.code)).toContain('014040-6');
+  });
+
+  it('não sinaliza ambiguidade quando o melhor candidato é único', () => {
+    const rows = [
+      { code: '005408-9', model: 'Saveiro CROSS 1.6 T.Flex 16V CD', value: 'R$ 88.070,00' },
+      { code: '005508-5', model: 'T-Cross Hig. 250 TSI 1.4 Flex 16V 5p Aut', value: 'R$ 113.458,00' },
+    ];
+
+    const { primary } = rankFipeRows('T CROSS HL TSI', rows);
+    expect(primary.ambiguousCount).toBe(1);
+    expect(primary.code).toBe('005508-5');
+  });
+
+  it('não marca ambiguidade para versões com nomes diferentes (Hig. x Comfor. x Sense)', () => {
+    const rows = [
+      { code: '005508-5', model: 'T-Cross Hig. 250 TSI 1.4 Flex 16V 5p Aut', value: 'R$ 113.458,00' },
+      { code: '005509-3', model: 'T-Cross Comfor. 200 TSI 1.0 Flex 5p Aut.', value: 'R$ 100.367,00' },
+      { code: '005520-4', model: 'T-Cross Sense 200 TSI 1.0 Flex 5p Aut.', value: 'R$ 89.326,00' },
+    ];
+
+    const { primary } = rankFipeRows('T CROSS HL TSI', rows);
+    expect(primary.matchScore).toBe(0.75);
+    expect(primary.ambiguousCount).toBe(1);
+  });
+
+  it('marca ambiguidade quando a diferença é só o número de portas', () => {
+    const rows = [
+      { code: '024082-6', model: '206 Selection/ Sensation 1.0 16v 3p', value: 'R$ 6.402,00' },
+      { code: '024084-2', model: '206 Selection/ Sensation 1.0 16v 5p', value: 'R$ 6.611,00' },
+      { code: '024095-8', model: '206 Selection 1.6 16V 110cv 3p', value: 'R$ 7.799,00' },
+    ];
+
+    const { primary } = rankFipeRows('206 SELECTION', rows);
+    // 3p/5p do mesmo motor = ambíguo; o 1.6 (110cv) já é outra versão.
+    expect(primary.ambiguousCount).toBe(2);
+    expect(primary.code).toBe('024082-6');
+  });
+
   it('mantém a ordem da fonte quando não há modelo para comparar', () => {
     const rows = [
       { code: '001', model: 'Modelo A', value: 'R$ 1,00' },
