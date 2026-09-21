@@ -55,7 +55,7 @@ const config = {
   // unidades do serviço. 0 = fechar imediatamente após cada consulta.
   remoteIdleMs:
     process.env.PLATE_REMOTE_IDLE_MS === undefined
-      ? 60 * 1000
+      ? 3 * 60 * 1000
       : Number(process.env.PLATE_REMOTE_IDLE_MS),
   browserChannel: process.env.PLATE_BROWSER_CHANNEL || '',
   headless: process.env.PLATE_BROWSER_HEADLESS !== 'false',
@@ -103,7 +103,11 @@ let warnedAboutBrowser = false;
 // Sessão remota (CDP) reaproveitada entre consultas próximas.
 let remoteBrowser = null;
 let remoteContext = null;
+let remotePage = null;
 let remoteIdleTimer = null;
+
+// Modo local: contexto e página reaproveitados.
+let localPage = null;
 
 // Quando a fonte responde com desafio para requisições HTTP simples, evitamos
 // gastar uma requisição por consulta: só tentamos de novo depois deste intervalo.
@@ -250,13 +254,16 @@ async function loadPlateHtml(context, url) {
   const page = await context.newPage();
 
   try {
+    const tGoto = Date.now();
     const response = await page.goto(url, {
       waitUntil: 'domcontentloaded',
       timeout: config.requestTimeoutMs,
     });
+    const gotoMs = Date.now() - tGoto;
 
     const status = response ? response.status() : 0;
 
+    const tChallenge = Date.now();
     try {
       await page.waitForFunction(
         () => !/just a moment/i.test(document.title || '') && !!document.title,
@@ -265,8 +272,15 @@ async function loadPlateHtml(context, url) {
     } catch {
       // Se o desafio não resolveu, validamos o conteúdo abaixo.
     }
+    const challengeMs = Date.now() - tChallenge;
 
+    const tContent = Date.now();
     const html = await page.content();
+    const contentMs = Date.now() - tContent;
+
+    console.log(
+      `[plate-fetcher] navegação=${gotoMs}ms desafio=${challengeMs}ms leitura=${contentMs}ms bytes=${html.length}`
+    );
 
     if (isCloudflareChallenge(html)) {
       throw new PlateFetchError(
@@ -299,11 +313,86 @@ async function loadPlateHtml(context, url) {
   }
 }
 
+/**
+ * Página reaproveitada da sessão. Navegamos uma única vez até o site para
+ * resolver o desafio do Cloudflare e guardar o cookie `cf_clearance`; depois
+ * disso as consultas usam `fetch` DENTRO da página — que passa pelo Cloudflare
+ * (mesmo fingerprint e cookies do navegador) e leva ~1s, contra ~15s de uma
+ * navegação completa.
+ */
+async function getWorkerPage(context, which) {
+  const atual = which === 'remote' ? remotePage : localPage;
+  if (atual && !atual.isClosed()) return atual;
+
+  const page = await context.newPage();
+  if (which === 'remote') {
+    remotePage = page;
+  } else {
+    localPage = page;
+  }
+
+  const t0 = Date.now();
+  try {
+    await page.goto(`${SOURCE_URL}/`, {
+      waitUntil: 'domcontentloaded',
+      timeout: config.requestTimeoutMs,
+    });
+    await page
+      .waitForFunction(
+        () => !/just a moment/i.test(document.title || '') && !!document.title,
+        { timeout: config.challengeTimeoutMs }
+      )
+      .catch(() => {});
+
+    console.log(`[plate-fetcher] Sessão pronta em ${Date.now() - t0}ms (desafio resolvido).`);
+  } catch (error) {
+    console.warn(
+      '[plate-fetcher] Falha ao preparar a sessão:',
+      error.message.split('\n')[0]
+    );
+  }
+
+  return page;
+}
+
+/** Consulta usando fetch dentro da página (rápido, ~1s). */
+async function fetchViaPage(page, url) {
+  const t0 = Date.now();
+
+  try {
+    const resultado = await page.evaluate(async (alvo) => {
+      const resposta = await fetch(alvo, { credentials: 'include' });
+      return { status: resposta.status, texto: await resposta.text() };
+    }, url);
+
+    const ok =
+      resultado.status < 400 &&
+      hasFipeContent(resultado.texto) &&
+      !isCloudflareChallenge(resultado.texto);
+
+    console.log(
+      `[plate-fetcher] fetch na página: status=${resultado.status} bytes=${resultado.texto.length} ms=${
+        Date.now() - t0
+      } aproveitado=${ok}`
+    );
+
+    if (!ok) return null;
+
+    return { ok: true, status: resultado.status, finalUrl: url, html: resultado.texto };
+  } catch (error) {
+    console.warn('[plate-fetcher] fetch na página falhou:', error.message.split('\n')[0]);
+    return null;
+  }
+}
+
 /** Navegador local: Chromium do Playwright, reaproveitado entre consultas. */
 async function fetchWithLocalBrowser(url) {
   const context = await ensureContext(await ensureBrowser());
 
   try {
+    const rapido = await fetchViaPage(await getWorkerPage(context, 'local'), url);
+    if (rapido) return rapido;
+
     return await loadPlateHtml(context, url);
   } finally {
     scheduleIdleShutdown();
@@ -382,6 +471,7 @@ async function closeRemoteBrowser() {
   const browser = remoteBrowser;
   remoteBrowser = null;
   remoteContext = null;
+  remotePage = null;
 
   if (!browser) return;
 
@@ -398,16 +488,52 @@ async function fetchWithRemoteBrowser(url) {
 
   try {
     if (!remoteContext || remoteContext.isClosed?.()) {
-      remoteContext = await browser
-        .newContext(await buildContextOptions())
-        .then(prepareContext)
-        .catch(() => browser.contexts()[0]);
+      remoteContext = await createRemoteContext(browser);
+      remotePage = null;
     }
+
+    const rapido = await fetchViaPage(await getWorkerPage(remoteContext, 'remote'), url);
+    if (rapido) return rapido;
 
     return await loadPlateHtml(remoteContext, url);
   } finally {
     scheduleRemoteIdleClose();
   }
+}
+
+/**
+ * Cria o contexto remoto aplicando o bloqueio de assets. Se o `newContext`
+ * falhar, cai para o contexto padrão do navegador — e ainda assim aplica o
+ * bloqueio (sem ele a página fica várias vezes maior e mais lenta).
+ */
+async function createRemoteContext(browser) {
+  let context;
+  let usouPadrao = false;
+
+  try {
+    context = await browser.newContext(await buildContextOptions());
+  } catch (error) {
+    console.warn(
+      '[plate-fetcher] newContext falhou, usando contexto padrão:',
+      error.message.split('\n')[0]
+    );
+    context = browser.contexts()[0];
+    usouPadrao = true;
+  }
+
+  if (!context) throw new PlateFetchError('BROWSER_UNAVAILABLE', 'Contexto remoto indisponível.');
+
+  try {
+    await prepareContext(context);
+  } catch (error) {
+    console.warn('[plate-fetcher] Falha ao bloquear assets:', error.message.split('\n')[0]);
+  }
+
+  if (usouPadrao) {
+    console.warn('[plate-fetcher] ATENÇÃO: usando contexto padrão do navegador remoto.');
+  }
+
+  return context;
 }
 
 /** Estratégia 2: navegador que resolve o desafio do Cloudflare. */
@@ -427,6 +553,7 @@ async function closeBrowser() {
   const browser = browserInstance;
   browserInstance = null;
   contextInstance = null;
+  localPage = null;
   browserPromise = null;
 
   await closeRemoteBrowser();
@@ -578,9 +705,42 @@ async function fetchPlateHtml(plate) {
   };
 }
 
+/**
+ * Pré-aquece o navegador (sem navegar).
+ *
+ * Abrir a sessão remota custa ~5-7s. Se o frontend chamar isso quando o usuário
+ * começa a digitar a placa, essa espera acontece enquanto ele digita e a
+ * consulta em si fica bem mais rápida.
+ */
+async function warmup() {
+  if (browserMode() === 'remote') {
+    await enqueue(async () => {
+      const browser = await ensureRemoteBrowser();
+
+      if (!remoteContext || remoteContext.isClosed?.()) {
+        remoteContext = await createRemoteContext(browser);
+        remotePage = null;
+      }
+
+      await getWorkerPage(remoteContext, 'remote');
+      return true;
+    });
+
+    scheduleRemoteIdleClose();
+    return { mode: 'remote', warmed: true };
+  }
+
+  const context = await ensureContext(await ensureBrowser());
+  await getWorkerPage(context, 'local');
+  scheduleIdleShutdown();
+
+  return { mode: 'local', warmed: true };
+}
+
 module.exports = {
   PlateFetchError,
   fetchPlateHtml,
+  warmup,
   closeBrowser,
   isReusablePlateHtml,
   browserMode,

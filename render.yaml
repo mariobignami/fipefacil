@@ -40,9 +40,9 @@ services:
       # Cache de 6h por placa (valores FIPE mudam mensalmente): repetição é instantânea.
       - key: PLATE_CACHE_TTL_MS
         value: "21600000"
-      # Reaproveita a sessão do Browserless por 1 min após a última consulta:
+      # Reaproveita a sessão do Browserless por 3 min após a última consulta:
       # economiza ~5s por consulta. Use 0 para fechar imediatamente.
       - key: PLATE_REMOTE_IDLE_MS
-        value: "60000"
+        value: "180000"
       - key: PLATE_FETCH_TIMEOUT_MS
         value: "30000"

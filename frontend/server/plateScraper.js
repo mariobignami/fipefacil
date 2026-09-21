@@ -307,6 +307,10 @@ function parsePlateHtml(html, queriedPlate) {
   const vehicle = buildVehicleData(details, queriedPlate);
   const ranked = rankFipeRows(vehicle.model, fipeRows);
 
+  // Páginas de modelos populares podem listar dezenas de versões; enviamos só
+  // as mais relevantes para o app (o contador mantém o total real).
+  const maxCandidatos = Number(process.env.PLATE_MAX_CANDIDATES || 10);
+
   return {
     type: 'success',
     data: {
@@ -314,7 +318,7 @@ function parsePlateHtml(html, queriedPlate) {
       // A fonte lista vários candidatos; marcamos o mais parecido com o modelo
       // da placa, mas sem afirmar que é o valor exato do veículo.
       fipePrimary: ranked.primary,
-      sameYearModels: ranked.others,
+      sameYearModels: ranked.others.slice(0, maxCandidatos),
       candidatesCount: fipeRows.length,
       meta: {
         source: SOURCE_URL,

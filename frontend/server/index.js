@@ -11,6 +11,7 @@ const {
 const {
   PlateFetchError,
   fetchPlateHtml,
+  warmup,
   closeBrowser,
   browserMode,
 } = require('./plateFetcher.js');
@@ -73,6 +74,22 @@ app.get('/', (_req, res) => {
     source: SOURCE_URL,
     browserMode: browserMode(),
   });
+});
+
+// Pré-aquecimento: abre o navegador enquanto o usuário ainda está digitando,
+// para a consulta em si não pagar os ~5s de abertura da sessão.
+app.get('/api/warmup', async (_req, res) => {
+  try {
+    const result = await warmup();
+    return res.json({ status: 'ok', ...result });
+  } catch (error) {
+    console.warn('[plate-proxy] Warmup falhou:', error?.message);
+    return res.status(503).json({
+      status: 'error',
+      code: error?.code || 'WARMUP_FAILED',
+      message: error?.message,
+    });
+  }
 });
 
 app.get('/api/placa', async (req, res) => {

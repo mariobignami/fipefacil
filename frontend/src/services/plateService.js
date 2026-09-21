@@ -29,6 +29,19 @@ export function formatPlateDisplay(value, format) {
   return plate;
 }
 
+/**
+ * Pede ao backend para já abrir o navegador remoto enquanto o usuário digita.
+ * Economiza os ~5s de abertura da sessão na hora da consulta. Falha em
+ * silêncio: é só uma otimização.
+ */
+export function warmupPlateBackend() {
+  if (!PLATE_API_CONFIGURED) return Promise.resolve(false);
+
+  return fetch(`${PLATE_API_BASE}/api/warmup`, { method: 'GET' })
+    .then((response) => response.ok)
+    .catch(() => false);
+}
+
 export async function searchByPlate(plate) {
   const normalizedPlate = normalizePlateInput(plate);
 

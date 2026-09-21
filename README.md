@@ -108,13 +108,23 @@ via CDP). Assim o serviço no Render é um Node comum: leve e sem Chromium.
 | Situação | Tempo aproximado |
 | --- | --- |
 | Placa já consultada (cache de 6 h) | **< 1 s** |
-| Consulta nova, sessão do navegador reaproveitada | **~5–8 s** |
-| Consulta nova, abrindo sessão remota nova | **~11–15 s** |
+| Consulta com a sessão já preparada | **~1 s** |
+| Primeira consulta, com o navegador ainda abrindo | **~10–15 s** |
 | Primeira consulta após o serviço hibernar (plano free do Render) | +30–60 s |
 
-Otimizações aplicadas: sessão remota reaproveitada por `PLATE_REMOTE_IDLE_MS`
-(1 min), cache de 6 h, bloqueio de imagens/CSS/fontes e uma única sessão
-simultânea (fila).
+Como a consulta ficou rápida:
+
+1. **Pré-aquecimento** — quando você começa a digitar a placa, o frontend chama
+   `GET /api/warmup`. Esse pedido abre o navegador remoto, navega até o site e
+   resolve o desafio do Cloudflare (~5 s), guardando o cookie `cf_clearance`.
+2. **Consulta por `fetch` dentro da página** — com a sessão pronta, a consulta
+   não precisa navegar nem serializar o DOM: ela faz um `fetch` no próprio
+   navegador (mesmo fingerprint e cookies), que passa pelo Cloudflare em ~1 s.
+3. **Sessão reaproveitada** por `PLATE_REMOTE_IDLE_MS` e **cache** de 6 h por placa.
+4. Descarta imagens/CSS/fontes e usa uma única sessão simultânea (fila).
+
+Se algo no caminho rápido falhar (cookie expirado, por exemplo), o backend cai
+sozinho para a navegação completa — mais lenta, mas confiável.
 3. Suba o código para o GitHub (o `render.yaml` já está na raiz).
 4. Em [dashboard.render.com](https://dashboard.render.com) → **New** → **Blueprint** → selecione o repositório.
    Quando o Render pedir `PLATE_BROWSER_WS_ENDPOINT`, cole a URL do passo 2.
@@ -181,7 +191,7 @@ docker run -p 3001:3001 \
 | `PLATE_BROWSER_CHANNEL` | *(vazio)* | Canal do navegador local (`chrome`/`msedge`; vazio = Chromium do Playwright) |
 | `PLATE_BROWSER_HEADLESS` | `true` | `false` abre o navegador local visível (útil para depurar o desafio) |
 | `PLATE_BROWSER_IDLE_MS` | `300000` | Tempo ocioso antes de fechar o navegador **local** e liberar memória |
-| `PLATE_REMOTE_IDLE_MS` | `60000` | Tempo que a sessão remota fica aberta após a última consulta (`0` = fechar na hora) |
+| `PLATE_REMOTE_IDLE_MS` | `180000` | Tempo que a sessão remota fica aberta após a última consulta (`0` = fechar na hora) |
 | `PLATE_FETCH_TIMEOUT_MS` | `25000` | Timeout de cada requisição/navegação |
 | `PLATE_CHALLENGE_TIMEOUT_MS` | `20000` | Tempo máximo de espera pela resolução do desafio do Cloudflare |
 | `PLATE_CACHE_TTL_MS` | `21600000` (6 h) | TTL do cache em memória por placa |

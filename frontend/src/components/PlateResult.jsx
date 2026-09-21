@@ -10,6 +10,27 @@ function InfoRow({ label, value }) {
   );
 }
 
+function formatarConsulta(iso) {
+  if (!iso) return '';
+  const data = new Date(iso);
+  if (Number.isNaN(data.getTime())) return '';
+  return data.toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function nomeFonte(url) {
+  try {
+    return new URL(url).host.replace(/^www\./, '');
+  } catch {
+    return 'tabelafipebrasil.com';
+  }
+}
+
 export default function PlateResult({ data }) {
   const { vehicle, fipePrimary, sameYearModels, meta } = data || {};
 
@@ -30,24 +51,37 @@ export default function PlateResult({ data }) {
   return (
     <div className="result-container">
       <div className="result-card">
-        <h2 className="result-card-title">Dados do Veículo</h2>
-        <div className="info-grid">
-          <InfoRow label="Placa consultada" value={vehicle?.plate} />
-          <InfoRow label="Marca" value={vehicle?.brand} />
-          <InfoRow label="Modelo" value={vehicle?.model} />
-          <InfoRow label="Ano modelo" value={vehicle?.year} />
-          <InfoRow label="Ano fabricação" value={vehicle?.manufactureYear} />
-          <InfoRow label="Cor" value={vehicle?.color} />
-          <InfoRow label="Combustível" value={vehicle?.fuel} />
-          <InfoRow label="Categoria" value={vehicle?.category} />
-          <InfoRow label="Espécie" value={vehicle?.species} />
-          <InfoRow label="Cilindrada" value={vehicle?.engineSize} />
-          <InfoRow label="Potência" value={vehicle?.power} />
-          <InfoRow label="Passageiros" value={vehicle?.passengers} />
-          <InfoRow label="Importado" value={vehicle?.imported} />
-          <InfoRow label="Chassi" value={vehicle?.chassis} />
-          <InfoRow label="Cidade/UF" value={[vehicle?.city, vehicle?.state].filter(Boolean).join('/')} />
+        <div className="result-card-head">
+          <h2 className="result-card-title">Dados do Veículo</h2>
+          {vehicle?.plate && <span className="plate-chip">{vehicle.plate}</span>}
         </div>
+        <div className="info-grid">
+          <InfoRow
+            label="Modelo"
+            value={[vehicle?.brand, vehicle?.model].filter(Boolean).join(' ')}
+          />
+          <InfoRow label="Cor" value={vehicle?.color} />
+          <InfoRow label="Ano/Modelo" value={vehicle?.year} />
+          <InfoRow label="Potência" value={vehicle?.power} />
+          <InfoRow label="Chassi" value={vehicle?.chassis} />
+          <InfoRow
+            label="Cidade"
+            value={[vehicle?.city, vehicle?.state].filter(Boolean).join('/')}
+          />
+        </div>
+        <p className="vehicle-meta">
+          {meta?.source && (
+            <>
+              Tabela:{' '}
+              <a href={meta.source} target="_blank" rel="noreferrer">
+                {nomeFonte(meta.source)}
+              </a>
+            </>
+          )}
+          {formatarConsulta(meta?.queriedAt) && (
+            <> · Consulta: {formatarConsulta(meta.queriedAt)}</>
+          )}
+        </p>
       </div>
 
       {selected && (

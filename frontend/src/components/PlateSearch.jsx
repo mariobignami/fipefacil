@@ -1,9 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   normalizePlateInput,
   isValidPlate,
   detectPlateFormat,
   formatPlateDisplay,
+  warmupPlateBackend,
 } from '../services/plateService.js';
 
 const POSITION_RULES = {
@@ -24,6 +25,7 @@ function sanitizeByRule(value, rule) {
 export default function PlateSearch({ onSubmit, loading }) {
   const [plateFormat, setPlateFormat] = useState('auto');
   const [chars, setChars] = useState(['', '', '', '', '', '', '']);
+  const warmedUp = useRef(false);
   const normalized = useMemo(() => normalizePlateInput(chars.join('')), [chars]);
   const detectedFormat = useMemo(() => detectPlateFormat(normalized), [normalized]);
   const hasContent = normalized.length > 0;
@@ -43,6 +45,14 @@ export default function PlateSearch({ onSubmit, loading }) {
     setChars((prev) => {
       const next = [...prev];
       next[index] = clean;
+
+      // Assim que dá para ver que é uma placa de verdade, já pede ao backend
+      // para abrir o navegador remoto (esconde ~5s da espera na consulta).
+      if (!warmedUp.current && normalizePlateInput(next.join('')).length >= 3) {
+        warmedUp.current = true;
+        warmupPlateBackend();
+      }
+
       return next;
     });
     if (clean && index < 6) {

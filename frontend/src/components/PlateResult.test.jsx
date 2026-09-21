@@ -9,6 +9,12 @@ const baseData = {
     brand: 'Honda',
     model: 'FIT LX FLEX',
     year: '2012',
+    color: 'Dourada',
+    power: '101 cv',
+    chassis: '*****Z105072',
+    engineSize: '1339 cc',
+    species: 'Passageiro',
+    imported: 'Não',
     fuel: 'Álcool / Gasolina',
     category: 'Automóvel',
     city: 'CONTAGEM',
@@ -26,10 +32,35 @@ const baseData = {
     { code: '014040-6', model: 'Fit LX 1.4/ 1.4 Flex 8V/16V 5p Aut.', value: 'R$ 48.397,00' },
     { code: '014041-4', model: 'Fit LXL 1.4/ 1.4 Flex 8V/16V 5p Mec.', value: 'R$ 45.638,00' },
   ],
-  meta: { source: 'https://www.tabelafipebrasil.com/placa', warnings: [] },
+  meta: {
+    source: 'https://www.tabelafipebrasil.com/placa',
+    queriedAt: '2026-09-21T00:26:35.606Z',
+    warnings: [],
+  },
 };
 
 describe('PlateResult', () => {
+  it('mostra o cartão compacto com os dados pedidos, a referência e a data da consulta', () => {
+    render(<PlateResult data={baseData} />);
+
+    const card = screen.getByText('Dados do Veículo').closest('.result-card');
+
+    expect(within(card).getByText('HHE7F34')).toBeInTheDocument();
+    expect(within(card).getByText('Honda FIT LX FLEX')).toBeInTheDocument();
+    expect(within(card).getByText('Dourada')).toBeInTheDocument();
+    expect(within(card).getByText('2012')).toBeInTheDocument();
+    expect(within(card).getByText('101 cv')).toBeInTheDocument();
+    expect(within(card).getByText('*****Z105072')).toBeInTheDocument();
+    expect(within(card).getByText('CONTAGEM/MG')).toBeInTheDocument();
+    expect(within(card).getByText('tabelafipebrasil.com')).toBeInTheDocument();
+    expect(within(card).getByText(/Consulta:/)).toBeInTheDocument();
+
+    // Campos que saíram do cartão para deixá-lo menor
+    expect(within(card).queryByText('Espécie')).not.toBeInTheDocument();
+    expect(within(card).queryByText('Importado')).not.toBeInTheDocument();
+    expect(within(card).queryByText('Cilindrada')).not.toBeInTheDocument();
+  });
+
   it('mostra o modelo sugerido e a explicação da escolha', () => {
     render(<PlateResult data={baseData} />);
 

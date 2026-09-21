@@ -437,6 +437,47 @@ body {
   margin-bottom: 1.125rem;
 }
 
+.result-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.result-card-head .result-card-title {
+  margin-bottom: 0;
+}
+
+.plate-chip {
+  padding: 0.2rem 0.55rem;
+  color: var(--color-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  background: var(--color-primary-light);
+  border-radius: 6px;
+}
+
+.vehicle-meta {
+  margin: 0.9rem 0 0;
+  padding-top: 0.75rem;
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  border-top: 1px solid var(--color-border);
+}
+
+.vehicle-meta a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.vehicle-meta a:hover {
+  text-decoration: underline;
+}
+
 .result-card-title--warning {
   color: var(--color-warning);
 }
