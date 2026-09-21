@@ -37,9 +37,17 @@ export default function PlateResult({ data }) {
           <InfoRow label="Placa consultada" value={vehicle?.plate} />
           <InfoRow label="Marca" value={vehicle?.brand} />
           <InfoRow label="Modelo" value={vehicle?.model} />
-          <InfoRow label="Ano" value={vehicle?.year} />
+          <InfoRow label="Ano modelo" value={vehicle?.year} />
+          <InfoRow label="Ano fabricação" value={vehicle?.manufactureYear} />
+          <InfoRow label="Cor" value={vehicle?.color} />
           <InfoRow label="Combustível" value={vehicle?.fuel} />
           <InfoRow label="Categoria" value={vehicle?.category} />
+          <InfoRow label="Espécie" value={vehicle?.species} />
+          <InfoRow label="Cilindrada" value={vehicle?.engineSize} />
+          <InfoRow label="Potência" value={vehicle?.power} />
+          <InfoRow label="Passageiros" value={vehicle?.passengers} />
+          <InfoRow label="Importado" value={vehicle?.imported} />
+          <InfoRow label="Chassi" value={vehicle?.chassis} />
           <InfoRow label="Cidade/UF" value={[vehicle?.city, vehicle?.state].filter(Boolean).join('/')} />
         </div>
       </div>

@@ -23,11 +23,12 @@ Você pode usar direto no celular ou computador.
 1. Abra a aba **Consulta por Placa**
 2. Escolha o formato (**Automático**, **Antiga** ou **Mercosul**)
 3. Digite a placa (ex.: `ABC1234` ou `ABC1D23`, com ou sem hífen)
-3. Veja:
-   - dados principais do veículo
-   - FIPE principal em destaque
-   - outros modelos do mesmo ano
-4. A interface mostra preview visual de placa **antiga cinza** e **Mercosul**
+4. Veja:
+   - **todos os dados do veículo** que a fonte informa (marca, modelo, ano modelo/fabricação, cor, combustível, cilindrada, potência, espécie, passageiros, chassi parcial, município/UF)
+   - **modelo mais provável** para a FIPE, ranqueado pela semelhança com o modelo da placa
+   - **todos os modelos do mesmo ano** listados pela fonte, com botão **"Usar este"** para trocar o valor exibido
+   - aviso quando a fonte empata modelos com nomes praticamente iguais (ex.: `Mec.` × `Aut.`) e não há como decidir automaticamente
+5. A interface mostra preview visual de placa **antiga cinza** e **Mercosul**
 
 ## ✨ Funcionalidades
 

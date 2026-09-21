@@ -184,6 +184,54 @@ describe('plateScraper', () => {
     expect(parsed.data.sameYearModels).toHaveLength(1);
   });
 
+  it('extrai todos os campos que a fonte informa sobre o veículo', () => {
+    const html = `
+      <html><body>
+        <table class="fipeTablePriceDetail">
+          <tr><td>Marca:</td><td>Honda</td></tr>
+          <tr><td>Modelo:</td><td>FIT LX FLEX</td></tr>
+          <tr><td>Ano:</td><td>2011</td></tr>
+          <tr><td>Ano Modelo:</td><td>2012</td></tr>
+          <tr><td>Cor:</td><td>Dourada</td></tr>
+          <tr><td>Cilindrada:</td><td>1339 cc</td></tr>
+          <tr><td>Potencia:</td><td>101 cv</td></tr>
+          <tr><td>Combustível:</td><td>Álcool / Gasolina</td></tr>
+          <tr><td>Chassi:</td><td>*****Z105072</td></tr>
+          <tr><td>UF:</td><td>MG</td></tr>
+          <tr><td>Municipio:</td><td>CONTAGEM</td></tr>
+          <tr><td>Importado:</td><td>Não</td></tr>
+          <tr><td>Tipo Veiculo:</td><td>Automóvel</td></tr>
+          <tr><td>Especie Veiculo:</td><td>Passageiro</td></tr>
+          <tr><td>Passageiros:</td><td>5</td></tr>
+          <tr><td>Segmento:</td><td>Auto</td></tr>
+        </table>
+        <table class="fipe-desktop">
+          <tr><td>Código FIPE</td><td>Modelo</td><td>Valor</td></tr>
+          <tr><td>014039-2</td><td>Fit LX 1.4/ 1.4 Flex 8V/16V 5p Mec.</td><td>R$ 43.585,00</td></tr>
+        </table>
+      </body></html>
+    `;
+
+    const { data } = parsePlateHtml(html, 'HHE7F34');
+
+    expect(data.vehicle).toMatchObject({
+      brand: 'Honda',
+      model: 'FIT LX FLEX',
+      year: '2012',
+      manufactureYear: '2011',
+      color: 'Dourada',
+      engineSize: '1339 cc',
+      power: '101 cv',
+      species: 'Passageiro',
+      segment: 'Auto',
+      passengers: '5',
+      imported: 'Não',
+      chassis: '*****Z105072',
+      city: 'CONTAGEM',
+      state: 'MG',
+    });
+  });
+
   it('monta a URL de consulta no formato aceito pela fonte', () => {
     expect(buildPlateUrl('abc-1d23')).toBe(
       'https://www.tabelafipebrasil.com/placa/ABC1D23'
