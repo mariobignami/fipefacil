@@ -26,8 +26,6 @@ export default function PlateResult({ data }) {
   if (!data) return null;
 
   const isRecommended = selected?.code === fipePrimary?.code && (fipePrimary?.matchScore ?? 0) > 0;
-  const ambiguousCount = fipePrimary?.ambiguousCount ?? 1;
-  const isAmbiguous = ambiguousCount > 1 && candidates.length > 1;
 
   return (
     <div className="result-container">
@@ -75,65 +73,42 @@ export default function PlateResult({ data }) {
         </div>
       )}
 
-      {isAmbiguous && (
-        <div className="result-card result-card--notice">
-          <p className="ambiguity-note">
-            A fonte lista <strong>{ambiguousCount} modelos com nomes praticamente iguais</strong> para
-            esta placa e não informa a diferença entre eles — normalmente câmbio (manual/automático)
-            ou número de portas, que não constam nos dados da placa. Confira o seu veículo e escolha
-            na tabela abaixo; o valor muda bastante entre as versões.
-          </p>
-        </div>
-      )}
-
       <div className="result-card">
         <h2 className="result-card-title">
-          Modelos do mesmo ano listados pela fonte{candidates.length > 1 ? ` (${candidates.length})` : ''}
+          Modelos do mesmo ano{candidates.length > 1 ? ` (${candidates.length})` : ''}
         </h2>
-        <div className="same-year-table-wrapper">
-          <table className="same-year-table">
-            <thead>
-              <tr>
-                <th>Código FIPE</th>
-                <th>Modelo</th>
-                <th>Valor</th>
-                <th aria-label="Escolher modelo" />
-              </tr>
-            </thead>
-            <tbody>
-              {candidates.map((item, index) => {
-                const isSelected = item.code === selected?.code;
-                return (
-                  <tr
-                    key={`${item.code || 'sem-codigo'}-${index}`}
-                    className={isSelected ? 'is-selected' : undefined}
-                  >
-                    <td>{item.code || '-'}</td>
-                    <td>{item.model || '-'}</td>
-                    <td>{item.value || '-'}</td>
-                    <td className="same-year-table-action">
-                      {isSelected ? (
-                        <span className="model-selected-badge">selecionado</span>
-                      ) : (
-                        <button
-                          type="button"
-                          className="model-select-btn"
-                          onClick={() => setPickedCode(item.code)}
-                        >
-                          Usar este
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        <p className="source-note">
-          A fonte lista todos os modelos do ano dessa marca que <em>podem</em> corresponder à placa
-          e não indica qual é o correto. Confirme o modelo exato do veículo antes de usar o valor.
-        </p>
+        <ul className="model-list">
+          {candidates.map((item, index) => {
+            const isSelected = item.code === selected?.code;
+            return (
+              <li
+                key={`${item.code || 'sem-codigo'}-${index}`}
+                className={`model-item${isSelected ? ' is-selected' : ''}`}
+              >
+                <div className="model-item-main">
+                  <div className="model-item-head">
+                    <span className="model-item-code">{item.code || 'sem código'}</span>
+                  </div>
+                  <span className="model-item-name">{item.model || '-'}</span>
+                </div>
+                <div className="model-item-side">
+                  <span className="model-item-value">{item.value || '-'}</span>
+                  {isSelected ? (
+                    <span className="model-item-check">✓ selecionado</span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="model-select-btn"
+                      onClick={() => setPickedCode(item.code)}
+                    >
+                      Usar este
+                    </button>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       </div>
 
       {meta?.warnings?.length > 0 && (

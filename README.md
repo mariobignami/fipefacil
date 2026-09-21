@@ -26,8 +26,7 @@ Você pode usar direto no celular ou computador.
 4. Veja:
    - **todos os dados do veículo** que a fonte informa (marca, modelo, ano modelo/fabricação, cor, combustível, cilindrada, potência, espécie, passageiros, chassi parcial, município/UF)
    - **modelo mais provável** para a FIPE, ranqueado pela semelhança com o modelo da placa
-   - **todos os modelos do mesmo ano** listados pela fonte, com botão **"Usar este"** para trocar o valor exibido
-   - aviso quando a fonte empata modelos com nomes praticamente iguais (ex.: `Mec.` × `Aut.`) e não há como decidir automaticamente
+   - **todos os modelos do mesmo ano** em uma lista, com o botão **"Usar este"** para trocar o valor exibido
 5. A interface mostra preview visual de placa **antiga cinza** e **Mercosul**
 
 ## ✨ Funcionalidades
@@ -209,7 +208,7 @@ Este projeto é de código aberto e está disponível para uso pessoal e educaci
 
 - A consulta por placa depende do HTML de `https://www.tabelafipebrasil.com/placa`; mudanças de layout/seletor podem impactar o scraping.
 - **A fonte não informa o modelo exato do veículo.** Ela devolve uma *lista* de modelos do mesmo ano daquela marca que "podem corresponder" à placa (ex.: para um VW T-Cross ela lista também um Saveiro CROSS, que casou pela palavra "CROSS"). O app **ranqueia os candidatos pela semelhança com o modelo da placa** e mostra o primeiro como "Modelo mais provável", mantendo os outros na tabela.
-- **Quando não há como decidir, o app avisa e deixa você escolher.** Se os candidatos empatados forem a mesma versão com nome praticamente igual (`Fit LX ... 5p Mec.` × `Fit LX ... 5p Aut.`, ou `3p` × `5p`), os dados da placa **não** trazem câmbio/portas — nesse caso aparece um aviso e cada linha da tabela tem o botão **"Usar este"**, que troca o valor exibido. Só uma API de placa paga (que consulta a base oficial do veículo, com versão e câmbio) resolveria isso automaticamente.
+- **Quando não há como decidir, você escolhe.** Se os candidatos empatados forem a mesma versão com nome praticamente igual (`Fit LX ... 5p Mec.` × `Fit LX ... 5p Aut.`, ou `3p` × `5p`), os dados da placa **não** trazem câmbio/portas — nesse caso cada item da lista tem o botão **"Usar este"**, que troca o valor exibido. Só uma API de placa paga (que consulta a base oficial do veículo, com versão e câmbio) resolveria isso automaticamente.
 - A fonte está atrás do **Cloudflare com desafio JavaScript**, que responde `403` para requisições HTTP simples (fetch/axios/curl) — não importa o User-Agent ou os headers usados. Por isso o backend abre um **navegador headless (Playwright)** para resolver o desafio, reaproveitando a sessão entre as consultas.
 - Se nem o navegador headless passar, a API responde `503` com o código `SOURCE_BLOCKED` e detalhes das tentativas.
 - O recurso inclui tratamento para indisponibilidade da fonte e mensagens amigáveis quando não for possível interpretar os dados.

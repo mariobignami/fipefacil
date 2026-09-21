@@ -39,10 +39,14 @@ describe('PlateResult', () => {
     expect(screen.getByText(/fit, lx, flex/)).toBeInTheDocument();
   });
 
-  it('avisa quando há empate de modelos com o mesmo nome', () => {
+  it('lista todos os modelos do ano e marca o selecionado', () => {
     render(<PlateResult data={baseData} />);
 
-    expect(screen.getByText(/2 modelos com nomes praticamente iguais/)).toBeInTheDocument();
+    const itens = document.querySelectorAll('.model-item');
+    expect(itens).toHaveLength(3);
+    expect(document.querySelectorAll('.model-item.is-selected')).toHaveLength(1);
+    expect(screen.getByText('✓ selecionado')).toBeInTheDocument();
+    expect(screen.queryByText(/todos os modelos do ano dessa marca que/)).not.toBeInTheDocument();
   });
 
   it('permite trocar o modelo exibido pelo botão "Usar este"', async () => {
@@ -55,15 +59,6 @@ describe('PlateResult', () => {
     const card = screen.getByText('Modelo selecionado').closest('.result-card');
     expect(within(card).getByText('R$ 48.397,00')).toBeInTheDocument();
     expect(within(card).getByText('014040-6')).toBeInTheDocument();
-  });
-
-  it('não avisa empate quando o melhor candidato é único', () => {
-    const data = {
-      ...baseData,
-      fipePrimary: { ...baseData.fipePrimary, ambiguousCount: 1 },
-    };
-    render(<PlateResult data={data} />);
-
-    expect(screen.queryByText(/nomes praticamente iguais/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Escolhido por corresponder/)).not.toBeInTheDocument();
   });
 });
