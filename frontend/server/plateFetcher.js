@@ -376,12 +376,12 @@ async function fetchViaPage(page, url) {
       } aproveitado=${ok}`
     );
 
-    if (!ok) return null;
+    if (!ok) return { ok: false, status: resultado.status, html: resultado.texto };
 
-    return { ok: true, status: resultado.status, finalUrl: url, html: resultado.texto };
+    return { ok: true, status: resultado.status, html: resultado.texto };
   } catch (error) {
     console.warn('[plate-fetcher] fetch na página falhou:', error.message.split('\n')[0]);
-    return null;
+    return { ok: false, status: 0, html: '' };
   }
 }
 
@@ -391,7 +391,7 @@ async function fetchWithLocalBrowser(url) {
 
   try {
     const rapido = await fetchViaPage(await getWorkerPage(context, 'local'), url);
-    if (rapido) return rapido;
+    if (rapido.ok) return { ok: true, status: rapido.status, finalUrl: url, html: rapido.html };
 
     return await loadPlateHtml(context, url);
   } finally {
@@ -493,9 +493,25 @@ async function fetchWithRemoteBrowser(url) {
     }
 
     const rapido = await fetchViaPage(await getWorkerPage(remoteContext, 'remote'), url);
-    if (rapido) return rapido;
+    if (rapido.ok) return { ok: true, status: rapido.status, finalUrl: url, html: rapido.html };
 
-    return await loadPlateHtml(remoteContext, url);
+    // Limite por IP: jogamos a sessão fora para a próxima consulta receber
+    // outro IP residencial.
+    if (rapido.status === 429) {
+      await closeRemoteBrowser();
+      throw new PlateFetchError(
+        'SOURCE_RATE_LIMITED',
+        'A fonte limitou temporariamente as consultas (429). Tente novamente em alguns minutos.',
+        { status: 429, url }
+      );
+    }
+
+    try {
+      return await loadPlateHtml(remoteContext, url);
+    } catch (error) {
+      if (error?.code === 'SOURCE_RATE_LIMITED') await closeRemoteBrowser();
+      throw error;
+    }
   } finally {
     scheduleRemoteIdleClose();
   }
@@ -737,9 +753,46 @@ async function warmup() {
   return { mode: 'local', warmed: true };
 }
 
+/**
+ * Baixa um arquivo (ex.: logo da marca) usando a sessão do navegador e devolve
+ * como data URI. Assim o app não precisa buscar a imagem no domínio da fonte
+ * (que é protegido pelo Cloudflare e pode bloquear o pedido).
+ *
+ * Só aceita URLs do próprio site da fonte.
+ */
+async function fetchAssetAsDataUri(url) {
+  if (!/^https:\/\/www\.tabelafipebrasil\.com\//i.test(String(url || ''))) return '';
+
+  const page = browserMode() === 'remote' ? remotePage : localPage;
+  if (!page || page.isClosed()) return '';
+
+  try {
+    const resultado = await page.evaluate(async (alvo) => {
+      const resposta = await fetch(alvo);
+      if (!resposta.ok) return null;
+
+      const bytes = new Uint8Array(await resposta.arrayBuffer());
+      if (!bytes.length || bytes.length > 200 * 1024) return null;
+
+      let binario = '';
+      for (let i = 0; i < bytes.length; i += 1) binario += String.fromCharCode(bytes[i]);
+
+      return { tipo: resposta.headers.get('content-type') || 'image/png', base64: btoa(binario) };
+    }, url);
+
+    if (!resultado?.base64) return '';
+
+    return `data:${resultado.tipo};base64,${resultado.base64}`;
+  } catch (error) {
+    console.warn('[plate-fetcher] Falha ao baixar asset:', error.message.split('\n')[0]);
+    return '';
+  }
+}
+
 module.exports = {
   PlateFetchError,
   fetchPlateHtml,
+  fetchAssetAsDataUri,
   warmup,
   closeBrowser,
   isReusablePlateHtml,

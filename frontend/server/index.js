@@ -11,6 +11,7 @@ const {
 const {
   PlateFetchError,
   fetchPlateHtml,
+  fetchAssetAsDataUri,
   warmup,
   closeBrowser,
   browserMode,
@@ -91,6 +92,20 @@ app.get('/api/warmup', async (_req, res) => {
     });
   }
 });
+
+// Cache dos logos (data URI) por URL, para não baixar de novo a cada consulta.
+const logoCache = new Map();
+
+async function resolveBrandLogo(url) {
+  if (!url) return '';
+  if (url.startsWith('data:')) return url;
+  if (logoCache.has(url)) return logoCache.get(url);
+
+  const dataUri = await fetchAssetAsDataUri(url);
+  if (dataUri) logoCache.set(url, dataUri);
+
+  return dataUri || '';
+}
 
 app.get('/api/placa', async (req, res) => {
   const normalizedPlate = normalizePlateInput(req.query?.placa);
@@ -174,6 +189,13 @@ app.get('/api/placa', async (req, res) => {
         cached: false,
       },
     };
+
+    // O logo da marca vem embutido (data URI): o app não precisa pedir a
+    // imagem ao domínio da fonte, que é protegido pelo Cloudflare.
+    if (payload.vehicle?.brandLogo) {
+      const embutido = await resolveBrandLogo(payload.vehicle.brandLogo);
+      if (embutido) payload.vehicle.brandLogo = embutido;
+    }
 
     writeCache(normalizedPlate, payload);
 
