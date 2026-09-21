@@ -18,6 +18,71 @@ const VEHICLE_TYPE_MAP = {
   trucks: 'trucks',
 };
 
+// Categorias que a consulta por placa devolve -> tipo da API FIPE
+const PLATE_CATEGORY_MAP = {
+  automovel: 'cars',
+  motocicleta: 'motorcycles',
+  ciclomotor: 'motorcycles',
+  caminhao: 'trucks',
+  'caminhao trator': 'trucks',
+  onibus: 'trucks',
+  microonibus: 'trucks',
+};
+
+export function vehicleTypeFromCategory(category) {
+  const chave = String(category || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
+  return PLATE_CATEGORY_MAP[chave] || 'cars';
+}
+
+/**
+ * Histórico de preços de um veículo a partir do código FIPE (o que a consulta
+ * por placa fornece). Usa os endpoints "Busca por código FIPE" da API v2:
+ *   GET /{tipo}/{codigoFipe}/years            -> anos/combustíveis disponíveis
+ *   GET /{tipo}/{codigoFipe}/years/{ano}/history -> histórico em 1 requisição
+ */
+export async function fetchPriceHistoryByFipeCode(fipeCode, { vehicleType = 'cars', modelYear } = {}) {
+  const v2Type = VEHICLE_TYPE_MAP[vehicleType] || 'cars';
+  if (!fipeCode) return [];
+
+  try {
+    const anosRes = await fetch(`${FIPE_BASE_URL}/${v2Type}/${encodeURIComponent(fipeCode)}/years`);
+    if (!anosRes.ok) return [];
+    const anos = await anosRes.json();
+    if (!Array.isArray(anos) || !anos.length) return [];
+
+    const alvo = String(modelYear || '');
+    const anoEscolhido = anos.find((item) => alvo && String(item.name).startsWith(alvo)) || anos[0];
+
+    const histRes = await fetch(
+      `${FIPE_BASE_URL}/${v2Type}/${encodeURIComponent(fipeCode)}/years/${encodeURIComponent(
+        anoEscolhido.code
+      )}/history`
+    );
+    if (!histRes.ok) return [];
+
+    const dados = await histRes.json();
+    const historico = Array.isArray(dados?.priceHistory) ? dados.priceHistory : [];
+
+    return historico
+      .map((item) => ({
+        month: item.month || '',
+        price: parseFipePrice(item.price),
+        priceFormatted: item.price || '',
+        referenceCode: item.reference || '',
+      }))
+      .filter((item) => item.price > 0)
+      .reverse(); // a API devolve do mais recente para o mais antigo
+  } catch (error) {
+    console.error('[fipeService] Error getting plate price history:', error);
+    return [];
+  }
+}
+
 /**
  * Search FIPE data by brand, model, and year
  * This is the main function used when we have vehicle information

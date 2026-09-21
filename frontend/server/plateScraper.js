@@ -128,10 +128,23 @@ function parseFipeRows($, warnings) {
   return rows.filter((row) => row.code || row.model || row.value);
 }
 
+/**
+ * Logo da marca exibido pela fonte (ex.: .../logos/png/small/vw---volkswagen.png).
+ * Fica em um <img class="lazyload fipeLogoIMG" data-src="...">.
+ */
+function parseBrandLogo($) {
+  const img = $('.fipeLogoIMG').first();
+  if (!img.length) return '';
+
+  const url = img.attr('data-src') || img.attr('src') || '';
+  return /^https?:\/\//i.test(url) ? url : '';
+}
+
 function buildVehicleData(details, queriedPlate) {
   return {
     plate: queriedPlate,
     brand: findDetail(details, ['marca', 'fabricante']),
+    brandLogo: '',
     model: findDetail(details, ['modelo']),
     year: findDetail(details, ['ano modelo', 'ano']),
     manufactureYear: findDetail(details, ['ano']),
@@ -305,6 +318,7 @@ function parsePlateHtml(html, queriedPlate) {
   }
 
   const vehicle = buildVehicleData(details, queriedPlate);
+  vehicle.brandLogo = parseBrandLogo($);
   const ranked = rankFipeRows(vehicle.model, fipeRows);
 
   // Páginas de modelos populares podem listar dezenas de versões; enviamos só

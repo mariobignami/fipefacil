@@ -7,6 +7,7 @@ const baseData = {
   vehicle: {
     plate: 'HHE7F34',
     brand: 'Honda',
+    brandLogo: 'https://www.tabelafipebrasil.com/site/site/images/logos/png/small/honda.png',
     model: 'FIT LX FLEX',
     year: '2012',
     color: 'Dourada',
@@ -67,7 +68,51 @@ describe('PlateResult', () => {
     const card = screen.getByText('Modelo mais provável').closest('.result-card');
     expect(within(card).getByText('R$ 43.585,00')).toBeInTheDocument();
     expect(within(card).getByText('014039-2')).toBeInTheDocument();
-    expect(screen.getByText(/fit, lx, flex/)).toBeInTheDocument();
+    // O texto explicativo do casamento de palavras foi removido a pedido
+    expect(screen.queryByText(/Escolhido por corresponder/)).not.toBeInTheDocument();
+  });
+
+  it('mostra o logo da marca e o desenho da placa', () => {
+    render(<PlateResult data={baseData} />);
+
+    const logo = screen.getByAltText('Logo Honda');
+    expect(logo).toHaveAttribute(
+      'src',
+      'https://www.tabelafipebrasil.com/site/site/images/logos/png/small/honda.png'
+    );
+
+    // HHE7F34 é Mercosul (tem letra na 5ª posição)
+    const placa = document.querySelector('.plate-visual');
+    expect(placa).toHaveClass('plate-visual--mercosul');
+    expect(document.querySelector('.plate-visual-text')).toHaveTextContent('HHE7F34');
+  });
+
+  it('desenha a placa antiga com UF-Município e o traço', () => {
+    const data = {
+      ...baseData,
+      vehicle: { ...baseData.vehicle, plate: 'CXN6123', city: 'SAO LUIS', state: 'MA' },
+    };
+    render(<PlateResult data={data} />);
+
+    const placa = document.querySelector('.plate-visual');
+    expect(placa).toHaveClass('plate-visual--antiga');
+    expect(document.querySelector('.plate-visual-text')).toHaveTextContent('CXN-6123');
+    expect(document.querySelector('.plate-visual-local')).toHaveTextContent('MA-SAO LUIS');
+  });
+
+  it('mostra o histórico de preços quando há dados', () => {
+    render(
+      <PlateResult
+        data={baseData}
+        priceHistory={[
+          { month: 'agosto de 2026', price: 43000, priceFormatted: 'R$ 43.000,00' },
+          { month: 'setembro de 2026', price: 43585, priceFormatted: 'R$ 43.585,00' },
+        ]}
+        historyLoading={false}
+      />
+    );
+
+    expect(screen.getByText('Histórico de Preços por Mês de Referência')).toBeInTheDocument();
   });
 
   it('lista todos os modelos do ano e marca o selecionado', () => {

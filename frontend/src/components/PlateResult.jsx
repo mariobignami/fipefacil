@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import PlateVisual from './PlateVisual.jsx';
+import PriceHistoryChart from './PriceHistoryChart.jsx';
 
 function InfoRow({ label, value }) {
   if (!value && value !== 0) return null;
@@ -31,7 +33,7 @@ function nomeFonte(url) {
   }
 }
 
-export default function PlateResult({ data }) {
+export default function PlateResult({ data, priceHistory, historyLoading }) {
   const { vehicle, fipePrimary, sameYearModels, meta } = data || {};
 
   const candidates = [fipePrimary, ...(sameYearModels || [])].filter(Boolean);
@@ -53,7 +55,17 @@ export default function PlateResult({ data }) {
       <div className="result-card">
         <div className="result-card-head">
           <h2 className="result-card-title">Dados do Veículo</h2>
-          {vehicle?.plate && <span className="plate-chip">{vehicle.plate}</span>}
+          {vehicle?.brandLogo && (
+            <img
+              className="brand-logo"
+              src={vehicle.brandLogo}
+              alt={vehicle.brand ? `Logo ${vehicle.brand}` : 'Logo da marca'}
+              loading="lazy"
+              onError={(event) => {
+                event.currentTarget.style.display = 'none';
+              }}
+            />
+          )}
         </div>
         <div className="info-grid">
           <InfoRow
@@ -69,6 +81,16 @@ export default function PlateResult({ data }) {
             value={[vehicle?.city, vehicle?.state].filter(Boolean).join('/')}
           />
         </div>
+
+        <div className="plate-preview-area plate-preview-area--result">
+          <PlateVisual
+            plate={vehicle?.plate}
+            city={vehicle?.city}
+            state={vehicle?.state}
+            size="sm"
+          />
+        </div>
+
         <p className="vehicle-meta">
           {meta?.source && (
             <>
@@ -98,12 +120,12 @@ export default function PlateResult({ data }) {
             <InfoRow label="Código FIPE" value={selected.code} />
             <InfoRow label="Modelo" value={selected.model} />
           </div>
-          {isRecommended && fipePrimary?.matchedTokens?.length > 0 && (
-            <p className="match-hint">
-              Escolhido por corresponder a <strong>{fipePrimary.matchedTokens.join(', ')}</strong> do
-              modelo da placa.
-            </p>
-          )}
+        </div>
+      )}
+
+      {(historyLoading || priceHistory?.length >= 2) && (
+        <div className="result-card result-card--history">
+          <PriceHistoryChart data={priceHistory} loading={historyLoading} />
         </div>
       )}
 

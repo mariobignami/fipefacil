@@ -15,12 +15,55 @@ describe('PlateSearch', () => {
     expect(inputs).toHaveLength(7);
   });
 
-  it('altera inputMode do 5º caractere no formato mercosul', () => {
+  it('aceita letra no 5º caractere (mercosul) e número (antiga)', () => {
     render(<PlateSearch onSubmit={vi.fn()} loading={false} />);
-    const select = screen.getByLabelText('Formato da placa');
-    fireEvent.change(select, { target: { value: 'mercosul' } });
-    const fifthInput = screen.getByLabelText('Caractere 5 da placa');
-    expect(fifthInput).toHaveAttribute('inputmode', 'text');
+
+    fireEvent.change(screen.getByLabelText('Caractere 5 da placa'), { target: { value: 'd' } });
+    expect(screen.getByLabelText('Caractere 5 da placa')).toHaveValue('D');
+
+    fireEvent.change(screen.getByLabelText('Caractere 5 da placa'), { target: { value: '4' } });
+    expect(screen.getByLabelText('Caractere 5 da placa')).toHaveValue('4');
+  });
+
+  it('não aceita letra nas posições numéricas', () => {
+    render(<PlateSearch onSubmit={vi.fn()} loading={false} />);
+
+    fireEvent.change(screen.getByLabelText('Caractere 4 da placa'), { target: { value: 'x' } });
+    expect(screen.getByLabelText('Caractere 4 da placa')).toHaveValue('');
+
+    fireEvent.change(screen.getByLabelText('Caractere 1 da placa'), { target: { value: '1' } });
+    expect(screen.getByLabelText('Caractere 1 da placa')).toHaveValue('');
+  });
+
+  it('mostra apenas uma placa de preview, no formato digitado', () => {
+    render(<PlateSearch onSubmit={vi.fn()} loading={false} />);
+
+    const placa = ['c', 'x', 'n', '6', '1', '2', '3'];
+    placa.forEach((char, index) => {
+      fireEvent.change(screen.getByLabelText(`Caractere ${index + 1} da placa`), {
+        target: { value: char },
+      });
+    });
+
+    const previews = document.querySelectorAll('.plate-visual');
+    expect(previews).toHaveLength(1);
+    expect(previews[0]).toHaveClass('plate-visual--antiga');
+    expect(document.querySelector('.plate-visual-text')).toHaveTextContent('CXN-6123');
+  });
+
+  it('usa o desenho Mercosul quando o 5º caractere é letra', () => {
+    render(<PlateSearch onSubmit={vi.fn()} loading={false} />);
+
+    const placa = ['c', 'x', 'n', '6', 'd', '2', '3'];
+    placa.forEach((char, index) => {
+      fireEvent.change(screen.getByLabelText(`Caractere ${index + 1} da placa`), {
+        target: { value: char },
+      });
+    });
+
+    const preview = document.querySelector('.plate-visual');
+    expect(preview).toHaveClass('plate-visual--mercosul');
+    expect(document.querySelector('.plate-visual-text')).toHaveTextContent('CXN6D23');
   });
 
   it('submete placa normalizada', () => {

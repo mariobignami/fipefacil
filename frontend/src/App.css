@@ -252,6 +252,149 @@ body {
   line-height: 1.45;
 }
 
+/* Desenho da placa (mercosul / antiga) */
+.plate-visual {
+  display: inline-flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 240px;
+  overflow: hidden;
+  background: #fff;
+  border: 2px solid #1f2937;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.plate-visual--sm {
+  max-width: 150px;
+  border-width: 1.5px;
+  border-radius: 6px;
+}
+
+.plate-visual-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  padding: 3px 6px;
+  color: #fff;
+  background: #1d4ed8;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+.plate-visual--sm .plate-visual-header {
+  min-height: 18px;
+  padding: 2px 4px;
+}
+
+.plate-visual-flag {
+  position: absolute;
+  top: 3px;
+  left: 6px;
+  width: 14px;
+  height: 9px;
+  background: linear-gradient(180deg, #16a34a 55%, #facc15 55%);
+  border-radius: 1px;
+}
+
+.plate-visual--sm .plate-visual-flag {
+  width: 10px;
+  height: 7px;
+  top: 2px;
+  left: 4px;
+}
+
+.plate-visual-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.plate-visual-subtitle {
+  position: absolute;
+  bottom: 1px;
+  left: 6px;
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  opacity: 0.95;
+}
+
+.plate-visual-header--antiga {
+  background: #d4d4d4;
+  color: #1f2937;
+  min-height: 22px;
+}
+
+.plate-visual-local {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.plate-visual--antiga {
+  background: #d4d4d4;
+  border-color: #9ca3af;
+}
+
+.plate-visual-body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0.4rem;
+  background: #fff;
+}
+
+.plate-visual--antiga .plate-visual-body {
+  background: #d4d4d4;
+}
+
+.plate-visual--sm .plate-visual-body {
+  padding: 0.3rem;
+}
+
+.plate-visual-text {
+  color: #111827;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+
+.plate-visual--sm .plate-visual-text {
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+}
+
+.plate-visual--placeholder {
+  opacity: 0.75;
+}
+
+.plate-visual--placeholder .plate-visual-text {
+  color: #9ca3af;
+}
+
+.plate-preview-area {
+  display: flex;
+  justify-content: center;
+  padding: 0.25rem 0 0.75rem;
+}
+
+.plate-preview-area--result {
+  margin-top: 1rem;
+  padding: 0;
+}
+
+.brand-logo {
+  height: 30px;
+  width: auto;
+  max-width: 54px;
+  object-fit: contain;
+}
+
 /* Lista de modelos do mesmo ano */
 .model-list {
   list-style: none;
@@ -865,42 +1008,6 @@ body {
   margin-top: 0.5rem;
   font-size: 0.8125rem;
   color: var(--color-text-muted);
-}
-
-.plate-preview-stack {
-  display: grid;
-  gap: 0.5rem;
-  margin: 0.5rem 0 1rem;
-}
-
-.plate-preview {
-  border-radius: 10px;
-  padding: 0.625rem 0.75rem;
-  border: 1px solid var(--color-border);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.plate-preview strong {
-  font-size: 1.05rem;
-  letter-spacing: 0.08em;
-}
-
-.plate-preview-tag {
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-
-.plate-preview--old {
-  background: #f3f4f6;
-}
-
-.plate-preview--mercosul {
-  background: #eff6ff;
-  border-color: #bfdbfe;
 }
 
 .same-year-table-wrapper {

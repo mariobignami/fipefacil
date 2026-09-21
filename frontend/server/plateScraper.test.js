@@ -232,6 +232,28 @@ describe('plateScraper', () => {
     });
   });
 
+  it('extrai o logo da marca exibido pela fonte', () => {
+    const html = `
+      <html><body>
+        <img class="lazyload fipeLogoIMG" data-src="https://www.tabelafipebrasil.com/site/site/images/logos/png/small/vw---volkswagen.png" alt="Volkswagen">
+        <table class="fipeTablePriceDetail">
+          <tr><td>Marca:</td><td>Volkswagen</td></tr>
+          <tr><td>Modelo:</td><td>GOL SPECIAL MB</td></tr>
+          <tr><td>Ano Modelo:</td><td>2016</td></tr>
+        </table>
+        <table class="fipe-desktop">
+          <tr><td>Código FIPE</td><td>Modelo</td><td>Valor</td></tr>
+          <tr><td>005414-3</td><td>Gol Special 1.0 Total Flex 8V 5p</td><td>R$ 40.663,00</td></tr>
+        </table>
+      </body></html>
+    `;
+
+    const { data } = parsePlateHtml(html, 'PQR5D67');
+    expect(data.vehicle.brandLogo).toBe(
+      'https://www.tabelafipebrasil.com/site/site/images/logos/png/small/vw---volkswagen.png'
+    );
+  });
+
   it('monta a URL de consulta no formato aceito pela fonte', () => {
     expect(buildPlateUrl('abc-1d23')).toBe(
       'https://www.tabelafipebrasil.com/placa/ABC1D23'

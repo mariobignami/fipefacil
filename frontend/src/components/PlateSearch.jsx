@@ -3,15 +3,14 @@ import {
   normalizePlateInput,
   isValidPlate,
   detectPlateFormat,
-  formatPlateDisplay,
   warmupPlateBackend,
 } from '../services/plateService.js';
+import PlateVisual from './PlateVisual.jsx';
 
-const POSITION_RULES = {
-  old: ['L', 'L', 'L', 'N', 'N', 'N', 'N'],
-  mercosul: ['L', 'L', 'L', 'N', 'L', 'N', 'N'],
-  auto: ['L', 'L', 'L', 'N', 'A', 'N', 'N'],
-};
+// Posições: L = letra, N = número, A = letra ou número.
+// Antiga (ABC1234) = L L L N N N N | Mercosul (ABC1D23) = L L L N L N N.
+// Só o 5º caractere diferencia os dois formatos.
+const POSITION_RULES = ['L', 'L', 'L', 'N', 'A', 'N', 'N'];
 
 function sanitizeByRule(value, rule) {
   const raw = String(value || '').toUpperCase();
@@ -23,15 +22,17 @@ function sanitizeByRule(value, rule) {
 }
 
 export default function PlateSearch({ onSubmit, loading }) {
-  const [plateFormat, setPlateFormat] = useState('auto');
   const [chars, setChars] = useState(['', '', '', '', '', '', '']);
   const warmedUp = useRef(false);
   const normalized = useMemo(() => normalizePlateInput(chars.join('')), [chars]);
   const detectedFormat = useMemo(() => detectPlateFormat(normalized), [normalized]);
   const hasContent = normalized.length > 0;
-  const showError = hasContent && normalized.length === 7 && !isValidPlate(normalized);
-  const activeFormat = detectedFormat === 'unknown' ? plateFormat : detectedFormat;
-  const formatLabel = activeFormat === 'mercosul' ? 'Mercosul' : activeFormat === 'old' ? 'Antiga' : 'Automático';
+  const showError = normalized.length === 7 && !isValidPlate(normalized);
+
+  // O 5º caractere decide o formato: letra = Mercosul, número = antiga.
+  const isMercosul =
+    detectedFormat === 'mercosul' ||
+    (detectedFormat === 'unknown' && /^[A-Z]{3}\d[A-Z]/.test(normalized));
 
   function handleSubmit(event) {
     event.preventDefault();
@@ -40,8 +41,7 @@ export default function PlateSearch({ onSubmit, loading }) {
   }
 
   function updateChar(index, value) {
-    const rule = POSITION_RULES[plateFormat][index];
-    const clean = sanitizeByRule(value, rule);
+    const clean = sanitizeByRule(value, POSITION_RULES[index]);
     const next = [...chars];
     next[index] = clean;
     setChars(next);
@@ -70,36 +70,26 @@ export default function PlateSearch({ onSubmit, loading }) {
     event.preventDefault();
     const pasted = normalizePlateInput(event.clipboardData.getData('text'));
     if (!pasted) return;
-    const next = pasted.slice(0, 7).split('');
-    setChars((prev) => prev.map((_, index) => next[index] || ''));
+
+    const next = pasted
+      .slice(0, 7)
+      .split('')
+      .map((char, index) => sanitizeByRule(char, POSITION_RULES[index]));
+
+    setChars(next);
   }
 
   return (
     <form className="manual-search plate-search" onSubmit={handleSubmit}>
       <h3 className="manual-search-title">Consulta por Placa</h3>
       <p className="manual-search-description">
-        Digite uma placa de carro, moto ou outro veículo para consultar dados e FIPE.
+        Digite a placa do veículo (antiga ou Mercosul) para ver os dados e o valor FIPE.
       </p>
-
-      <div className="form-group">
-        <label htmlFor="plate-format">Formato da placa</label>
-        <select
-          id="plate-format"
-          className="form-select"
-          value={plateFormat}
-          onChange={(event) => setPlateFormat(event.target.value)}
-          disabled={loading}
-        >
-          <option value="auto">Automático</option>
-          <option value="old">Antiga (ABC-1234)</option>
-          <option value="mercosul">Mercosul (ABC1D23)</option>
-        </select>
-      </div>
 
       <div className="form-group">
         <label>Placa</label>
         <div className="plate-char-grid" onPaste={handlePaste}>
-          {POSITION_RULES[plateFormat].map((rule, index) => (
+          {POSITION_RULES.map((rule, index) => (
             <input
               key={index}
               id={`plate-char-${index}`}
@@ -116,23 +106,19 @@ export default function PlateSearch({ onSubmit, loading }) {
             />
           ))}
         </div>
-        <p className="plate-format-hint">Formato detectado: {formatLabel}</p>
         {showError && (
           <p className="validation-error" role="alert">
-            Informe uma placa válida no padrão brasileiro.
+            Informe uma placa válida no padrão brasileiro (ex.: ABC1234 ou ABC1D23).
           </p>
         )}
       </div>
 
-      <div className="plate-preview-stack" aria-live="polite">
-        <div className="plate-preview plate-preview--old">
-          <span className="plate-preview-tag">Placa antiga</span>
-          <strong>{formatPlateDisplay(normalized, 'old')}</strong>
-        </div>
-        <div className="plate-preview plate-preview--mercosul">
-          <span className="plate-preview-tag">Placa Mercosul</span>
-          <strong>{formatPlateDisplay(normalized, 'mercosul')}</strong>
-        </div>
+      <div className="plate-preview-area">
+        <PlateVisual
+          plate={normalized}
+          format={isMercosul ? 'mercosul' : 'old'}
+          placeholder={!hasContent}
+        />
       </div>
 
       <button
